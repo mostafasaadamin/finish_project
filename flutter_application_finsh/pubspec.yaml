@@ -54,8 +54,7 @@ dependencies:
   material_design_icons_flutter: ^6.0.7096
   page_transition: ^2.0.9
   card_swiper: ^2.0.4
-
- 
+  path_provider:
 
 dev_dependencies:
   flutter_test:

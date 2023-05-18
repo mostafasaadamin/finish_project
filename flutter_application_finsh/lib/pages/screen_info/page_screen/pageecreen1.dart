@@ -11,8 +11,7 @@ class pageScreen1 extends StatelessWidget {
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
-          children: <Widget>
-          [
+          children: [
             Container(
               height: 300,
               decoration: BoxDecoration(
@@ -67,6 +66,7 @@ class pageScreen1 extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.only(bottom: 20,left: 20),
                 scrollDirection: Axis.horizontal,
+
                 children: <Widget>
                 [
                   makeCard(

@@ -22,17 +22,17 @@ class _newInformationState extends State<newInformation> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text('Categories', style: TextStyle(fontSize: 20)),
-              ),
-              SizedBox(height: 10),
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('Categories', style: TextStyle(fontSize: 20)),
+            ),
+            SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
                   SizedBox(
                     width: 120,
@@ -81,20 +81,16 @@ class _newInformationState extends State<newInformation> {
                   ),
                 ],
               ),
-              SizedBox(height: 10),
-              Center(
-                child: GestureDetector(
+            ),
+            SizedBox(height: 10),
+            Center(
+              child: GestureDetector(
   onTap: () {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider(
-          create: (_) => LearningFaceDetectionState(),
-          child: LearningFaceDetection(),
-        ),
+        builder: (_) => CameraScreen(),
       ),
-    ).then((value) {
-      Navigator.pop(context);
-    });
+    );
   },
   child: Image.asset(
     "assets/images/heartbeat.gif",
@@ -103,9 +99,8 @@ class _newInformationState extends State<newInformation> {
   ),
 ),
 
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
