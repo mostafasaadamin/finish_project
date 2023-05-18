@@ -55,7 +55,8 @@ dependencies:
   page_transition: ^2.0.9
   card_swiper: ^2.0.4
   path_provider:
-
+  video_player:
+  fluttertoast:
 dev_dependencies:
   flutter_test:
     sdk: flutter

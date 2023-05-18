@@ -22,72 +22,87 @@ class pageScreen1 extends StatelessWidget {
                   ]
                   ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children:<Widget> 
-                [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children:<Widget>
-                       [
-                        Expanded(
-                          flex: 4,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              'Information and Knowledge',style: TextStyle(
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children:<Widget>
+                    [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children:<Widget>
+                           [
+                            Expanded(
+                              flex: 4,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  'Information and Knowledge',style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        SizedBox(
-                          height: 15,
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Image.asset('assets/images/hr.png'),
-                        ),
-                       ],
-                    )
-                ],
+                            SizedBox(
+                              height: 15,
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Image.asset('assets/images/hr.png'),
+                            ),
+                           ],
+                        )
+                    ],
+                  ),
+                ),
               ),
             ),
             SizedBox(
               height: 30,
             ),
-            
-            Container(
-              height: 200,
-              width: double.infinity,
-              child: ListView(
-                padding: EdgeInsets.only(bottom: 20,left: 20),
-                scrollDirection: Axis.horizontal,
 
-                children: <Widget>
-                [
-                  makeCard(
-                    context: context,
-                    startColor: Color.fromRGBO(252, 212, 155, 1),
-                    endColor: Color.fromRGBO(251, 53, 105, 1),
-                    image: 'assets/images/heart-rate.png',
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                   makeCard(
-                    context: context,
-                    startColor: Color.fromRGBO(203, 251, 255, 1),
-                    endColor: Color.fromRGBO(81, 233, 234, 1),
-                    image: 'assets/images/heart-attack.png',
-                  ),
-                  
-                ],  
-              ),
+        Container(
+          height: 400,
+          child: Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
+              children: [
+                makeCard(
+                  context: context,
+                  startColor: Color.fromRGBO(252, 212, 155, 1),
+                  endColor: Color.fromRGBO(251, 53, 105, 1),
+                  image: 'assets/images/heart-rate.png',
+                ),
+                makeCard(
+                  context: context,
+                  startColor: Color.fromRGBO(203, 251, 255, 1),
+                  endColor: Color.fromRGBO(81, 233, 234, 1),
+                  image: 'assets/images/heart-attack.png',
+                ),
+                makeCard(
+                  context: context,
+                  startColor: Color.fromRGBO(255, 204, 128, 1),
+                  endColor: Color.fromRGBO(255, 107, 107, 1),
+                  image: 'assets/images/heart-rate.png',
+                ),
+                makeCard(
+                  context: context,
+                  startColor: Color.fromRGBO(217, 237, 247, 1),
+                  endColor: Color.fromRGBO(126, 214, 223, 1),
+                  image: 'assets/images/heart-rate.png',
+                ),
+              ],
             ),
+          ),
+        )
           ],
         ),
       ),
