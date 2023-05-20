@@ -57,6 +57,7 @@ dependencies:
   path_provider:
   video_player:
   fluttertoast:
+  http:
 dev_dependencies:
   flutter_test:
     sdk: flutter
