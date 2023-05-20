@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -68,6 +69,7 @@ class _LearningFaceDetectionState extends State<LearningFaceDetection> {
 
         state.rgb = 'R: $red, G: $green, B: $blue';
 
+  if(!state.isLoading) sendDataToApi(red, green, blue);
 
         ///FAke One
        //  double gray = (0.2989 * red) + (0.5870 * green) + (0.1140 * blue);
@@ -82,6 +84,45 @@ class _LearningFaceDetectionState extends State<LearningFaceDetection> {
       state.stopProcessing();
     }
   }
+
+  void sendDataToApi(int r,int g,int b) async{
+
+    ///From Api
+
+    if(mounted) state.isLoading = true;
+    // Send RGB colors to API using HTTP
+    try {
+      //TODO undo this for api
+      // var response = await http.post(
+      //   Uri.parse('https://example.com/rgb'),
+      //   body: {
+      //     'red': r.toString(),
+      //     'green': g.toString(),
+      //     'blue': b.toString()
+      //   },
+      // );
+      //
+      // // Check if API call was successful
+      // if (response.statusCode == 200) {
+      //   // Parse the response body to get the heart rate
+      //   var responseBody = json.decode(response.body);
+      //   var heartRate = responseBody['heartRate'];
+      //
+      //   // Update the state with the new heart rate
+      //   state.heartRate = heartRate.toString();
+      // }
+
+      double heartRate = Random().nextInt(41) + 60;
+      state.heartRate="HeartRate:  ${heartRate.toString()}";
+    } catch (e) {
+      if(mounted) state.isLoading = false;
+      double heartRate = Random().nextInt(41) + 60;
+      state.heartRate="HeartRate:${heartRate.toString()}";
+    }
+    if(mounted) state.isLoading = false;
+
+  }
+
   @override
   void dispose() {
     _detector.dispose();
@@ -165,7 +206,9 @@ class LearningFaceDetectionState extends ChangeNotifier {
   String _rgb = '';
   String _heartRate = '';
   bool _isLoading=false;
+  int _countDown=15;
   InputImage? get image => _image;
+  int get countDown => _countDown;
   bool get isLoading => _isLoading;
   List<Face> get data => _data;
   String get rgb => _rgb;
@@ -189,6 +232,11 @@ class LearningFaceDetectionState extends ChangeNotifier {
     _isProcessing = false;
     notifyListeners();
   }
+  void setCountDown(int value) {
+    _countDown =value;
+    notifyListeners();
+  }
+
 
   set image(InputImage? image) {
     _image = image;
