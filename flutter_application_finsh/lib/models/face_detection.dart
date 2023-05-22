@@ -768,15 +768,18 @@ class _VideoRecorderWidgetState extends State<VideoRecorderWidget> {
     return Scaffold(
       body: Stack(
         children: [
-          FutureBuilder(
-            future:_initializeControllerFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done) {
-                return CameraPreview(_controller);
-              } else {
-                return Center(child:Text("Press Start Record Button"));
-              }
-            },
+          SizedBox(
+            height: MediaQuery.of(context).size.height,
+            child: FutureBuilder(
+              future:_initializeControllerFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  return CameraPreview(_controller);
+                } else {
+                  return Center(child:Text("Press Start Record Button"));
+                }
+              },
+            ),
           ),
           Positioned.fill(
             top: 50,
