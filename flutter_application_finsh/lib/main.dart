@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_finsh/layout/home_layout.dart';
-import 'package:flutter_application_finsh/models/face_detection.dart';
-import 'package:provider/provider.dart';
-
 void main() async {
-  runApp(ChangeNotifierProvider(
-      create: (_) => LearningFaceDetectionState(),
-      child: MyApp()));
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {

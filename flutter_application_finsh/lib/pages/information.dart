@@ -88,7 +88,7 @@ class _newInformationState extends State<newInformation> {
   onTap: () {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => LearningFaceDetection(),
+        builder: (_) => VideoRecorderWidget(),
       ),
     );
   },
