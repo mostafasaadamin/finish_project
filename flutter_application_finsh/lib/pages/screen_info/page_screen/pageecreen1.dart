@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_finsh/pages/screen_info/page_screen/viewhr.dart';
+import 'package:flutter_application_finsh/pages/screens/Screen1.dart';
+import 'package:flutter_application_finsh/pages/screens/Screen2.dart';
 import 'package:page_transition/page_transition.dart';
 
 class pageScreen1 extends StatelessWidget {
@@ -80,24 +82,61 @@ class pageScreen1 extends StatelessWidget {
                   startColor: Color.fromRGBO(252, 212, 155, 1),
                   endColor: Color.fromRGBO(251, 53, 105, 1),
                   image: 'assets/images/heart-rate.png',
+                    title: "View Hr",
+                    onTap: (){
+                    Navigator.push(
+                        context,
+                        PageTransition(type: PageTransitionType.fade,
+                            child: ViewHR()
+                        )
+                    );
+                  }
                 ),
                 makeCard(
                   context: context,
                   startColor: Color.fromRGBO(203, 251, 255, 1),
                   endColor: Color.fromRGBO(81, 233, 234, 1),
                   image: 'assets/images/heart-attack.png',
+                    title: "Screen1",
+                    onTap: (){
+                      Navigator.push(
+                          context,
+                          PageTransition(type: PageTransitionType.fade,
+                              child: Screen1()
+                          )
+                      );
+                    }
                 ),
                 makeCard(
                   context: context,
                   startColor: Color.fromRGBO(255, 204, 128, 1),
                   endColor: Color.fromRGBO(255, 107, 107, 1),
                   image: 'assets/images/heart-rate.png',
+                    title: "Screen2",
+
+                    onTap: (){
+                      Navigator.push(
+                          context,
+                          PageTransition(type: PageTransitionType.fade,
+                              child: Screen2()
+                          )
+                      );
+                    }
                 ),
                 makeCard(
                   context: context,
                   startColor: Color.fromRGBO(217, 237, 247, 1),
                   endColor: Color.fromRGBO(126, 214, 223, 1),
+                  title: "View Hr",
                   image: 'assets/images/heart-rate.png',
+                    onTap: (){
+                      Navigator.push(
+                          context,
+                          PageTransition(type: PageTransitionType.fade,
+                              child: ViewHR()
+                          )
+                      );
+                    }
                 ),
               ],
             ),
@@ -109,19 +148,12 @@ class pageScreen1 extends StatelessWidget {
     );
   }
 
-  Widget makeCard({context,startColor,endColor,image}){
+  Widget makeCard({context,startColor,endColor,image,required Function() onTap,required title}){
 
     return GestureDetector(
-      onTap: (){
-            Navigator.push(
-              context,
-               PageTransition(type: PageTransitionType.fade,
-                  child: ViewHR()
-                )
-            );
-        },
+      onTap:onTap,
       child: AspectRatio(
-        aspectRatio: 4/5,
+        aspectRatio:1,
         child: Container(
           margin: EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
@@ -142,9 +174,18 @@ class pageScreen1 extends StatelessWidget {
             ]
           ),
           child: Padding(
-            padding:EdgeInsets.all(50),
-            child: Center(
-              child: Image.asset(image),
+            padding:EdgeInsets.all(0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: Center(child: Image.asset(image),),
+                ),
+                SizedBox(height: 10,),
+                Text(title,style: TextStyle(color: Colors.white),)
+              ],
             ),
             ),
         ),
