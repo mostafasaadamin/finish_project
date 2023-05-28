@@ -57,7 +57,11 @@ dependencies:
   path_provider:
   video_player:
   fluttertoast:
-  http:
+  palette_generator: ^0.3.0
+#  fake_heartbeat:
+  timer_count_down: ^2.2.2
+
+  http: ^0.13.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
