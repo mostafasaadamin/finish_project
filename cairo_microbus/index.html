@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#1b1b1b">
+  <title>ميكروباص القاهرة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game"></div>
+  <div id="bubbles"></div>
+
+  <div id="hud" class="hidden">
+    <!-- top left: map + side buttons -->
+    <canvas id="minimap"></canvas>
+    <div id="sideBtns">
+      <button id="camBtn" class="round" title="الكاميرا (V)">🎥</button>
+      <button id="pauseBtn" class="round" title="إيقاف (P)">⏸</button>
+    </div>
+
+    <div id="paxPill" class="pill"><span>👥</span><b id="pax">0/14</b></div>
+
+    <div id="topRight">
+      <div id="moneyBox" class="pill"><span>💵</span><b id="money">0</b><button id="moneyPlus" class="plus">+</button></div>
+      <div id="fuelPill" class="pill"><span>⛽</span><b id="fuel">0</b><button id="fuelPlus" class="plus">+</button></div>
+    </div>
+
+    <div id="street">شارع</div>
+    <div id="nextStop"></div>
+    <div id="subs"></div>
+    <div id="toasts"></div>
+    <div id="rotateHint">📱↻ لف الموبايل بالعرض عشان تسوق أحسن</div>
+
+    <div id="actions">
+      <button id="callBtn" class="act" title="نادي على الركاب (C)">📣<span>نادي</span></button>
+      <button id="fareBtn" class="act" title="لمّ الأجرة (F)">💰<span>الأجرة</span></button>
+      <button id="radioBtn" class="act" title="الكاسيت (R)">📻<span>كاسيت</span></button>
+      <button id="musichorn" class="act" title="كلاكس مزيكا (J)">🎺<span>مزيكا</span></button>
+    </div>
+
+    <div id="blinkers">
+      <button id="blinkL" class="round arrow" title="إشارة شمال (Q)">⬅</button>
+      <button id="hazard" class="round" title="انتظار (X)">⚠</button>
+      <button id="blinkR" class="round arrow" title="إشارة يمين (E)">➡</button>
+    </div>
+
+    <div id="wheel" aria-label="الدريكسيون">
+      <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="88" fill="none" stroke="#1d1d1d" stroke-width="18"/>
+        <circle cx="100" cy="100" r="88" fill="none" stroke="#3a3a3a" stroke-width="4"/>
+        <path d="M18 108 Q100 80 182 108 L182 120 Q100 98 18 120 Z" fill="#262626"/>
+        <rect x="88" y="110" width="24" height="70" rx="6" fill="#262626"/>
+        <circle cx="100" cy="112" r="30" fill="#2f2f2f" stroke="#444" stroke-width="3"/>
+        <circle cx="100" cy="112" r="8" fill="#888"/>
+        <rect x="95" y="6" width="10" height="16" rx="3" fill="#c62828"/>
+      </svg>
+    </div>
+
+    <canvas id="gauges"></canvas>
+
+    <button id="horn" class="round big" title="كلاكس (H)">📯</button>
+    <div id="pedals">
+      <div id="brake" class="pedal brake" title="فرامل (↓ / Space)"></div>
+      <div id="gas" class="pedal gas" title="بنزين (↑)"></div>
+    </div>
+    <div id="gearbox">
+      <button id="gearD" class="gear on">D</button>
+      <button id="gearR" class="gear">R</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="card">
+      <h2>⏸ استراحة يا اسطى</h2>
+      <button id="voiceBtn" class="btn ghost">🔊 أصوات الكلام: شغّالة</button>
+      <p id="voiceStatus" class="small"></p>
+      <div class="help">
+        <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> سواقة (↓ وإنت واقف = رجوع)</div>
+        <div><kbd>Space</kbd> فرامل · <kbd>H</kbd> كلاكس · <kbd>J</kbd> كلاكس مزيكا</div>
+        <div><kbd>C</kbd> نادي على الركاب · <kbd>F</kbd> لمّ الأجرة · <kbd>R</kbd> كاسيت</div>
+        <div><kbd>Q</kbd>/<kbd>E</kbd> إشارات · <kbd>X</kbd> انتظار · <kbd>V</kbd> الكاميرا · <kbd>P</kbd> إيقاف</div>
+      </div>
+      <button id="resumeBtn" class="btn">كمّل سواقة ▶</button>
+    </div>
+  </div>
+
+  <div id="start" class="overlay">
+    <div class="card">
+      <div class="logo">🚐</div>
+      <h1>ميكروباص القاهرة</h1>
+      <p class="tag">سوق في شوارع وسط البلد، لمّ الركاب من المواقف، اتخانق على الأجرة، واسمع البياعين وخناقات الشارع!</p>
+      <ul class="how">
+        <li>📍 اقف عند <b>الموقف</b> (الأزرق على الخريطة) بالراحة والركاب هيطلعوا لوحدهم</li>
+        <li>⬇ وصّل كل راكب لمحطته (الأحمر على الخريطة) واقف عندها</li>
+        <li>💰 دوس <b>الأجرة</b> عشان تلمّ الفلوس… وخلي بالك من الخناقات!</li>
+        <li>⛽ البنزين بيخلص – البنزينة على الخريطة</li>
+      </ul>
+      <p id="loadStatus" class="small">بيحمّل…</p>
+      <button id="startBtn" class="btn" disabled>يلا بينا… على الله! ▶</button>
+      <p class="small">🔊 شغّل الصوت. الكلام بيستخدم الصوت العربي اللي على جهازك (أحسن حاجة Edge أو Chrome).</p>
+    </div>
+  </div>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/dialogs.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/city.js"></script>
+  <script src="js/models.js"></script>
+  <script src="js/traffic.js"></script>
+  <script src="js/people.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
