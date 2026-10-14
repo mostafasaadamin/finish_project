@@ -21,7 +21,7 @@
     "thriller"
    ],
    "duration": null,
-   "bytes": 53910,
+   "bytes": 17180,
    "role": "punch"
   },
   {
@@ -49,7 +49,7 @@
     "whip"
    ],
    "duration": null,
-   "bytes": 6816,
+   "bytes": 2969,
    "role": "punch"
   },
   {
@@ -68,7 +68,7 @@
     "strong"
    ],
    "duration": null,
-   "bytes": 28598,
+   "bytes": 10075,
    "role": "punch"
   },
   {
@@ -88,7 +88,7 @@
     "ouch"
    ],
    "duration": null,
-   "bytes": 18048,
+   "bytes": 5895,
    "role": "punch"
   },
   {
@@ -115,7 +115,7 @@
     "impact"
    ],
    "duration": null,
-   "bytes": 53784,
+   "bytes": 25748,
    "role": "hit_body"
   },
   {
@@ -145,7 +145,7 @@
     "wood"
    ],
    "duration": null,
-   "bytes": 12004,
+   "bytes": 3805,
    "role": "hit_body"
   },
   {
@@ -173,7 +173,7 @@
     "thud"
    ],
    "duration": null,
-   "bytes": 24624,
+   "bytes": 8403,
    "role": "hit_body"
   },
   {
@@ -212,7 +212,7 @@
     "pain"
    ],
    "duration": null,
-   "bytes": 16512,
+   "bytes": 4641,
    "role": "hit_body"
   },
   {
@@ -231,7 +231,7 @@
     "punched"
    ],
    "duration": null,
-   "bytes": 9156,
+   "bytes": 4014,
    "role": "grunt"
   },
   {
@@ -264,7 +264,7 @@
     "yell"
    ],
    "duration": null,
-   "bytes": 339241,
+   "bytes": 48527,
    "role": "grunt"
   },
   {
@@ -284,7 +284,7 @@
     "yell"
    ],
    "duration": null,
-   "bytes": 20768,
+   "bytes": 7149,
    "role": "grunt"
   },
   {
@@ -310,7 +310,7 @@
     "voice"
    ],
    "duration": null,
-   "bytes": 155680,
+   "bytes": 48527,
    "role": "grunt"
   },
   {
@@ -332,7 +332,7 @@
     "yelling"
    ],
    "duration": null,
-   "bytes": 145646,
+   "bytes": 48527,
    "role": "scream"
   },
   {
@@ -365,7 +365,7 @@
     "yelling"
    ],
    "duration": null,
-   "bytes": 67584,
+   "bytes": 23031,
    "role": "scream"
   },
   {
@@ -386,7 +386,7 @@
     "terrified"
    ],
    "duration": null,
-   "bytes": 289994,
+   "bytes": 48527,
    "role": "scream"
   },
   {
@@ -411,7 +411,7 @@
     "yell"
    ],
    "duration": null,
-   "bytes": 82965,
+   "bytes": 27838,
    "role": "scream"
   },
   {
@@ -437,7 +437,7 @@
     "voice"
    ],
    "duration": null,
-   "bytes": 198432,
+   "bytes": 48527,
    "role": "arabic_shout"
   },
   {
@@ -460,7 +460,7 @@
     "yoyo"
    ],
    "duration": null,
-   "bytes": 170761,
+   "bytes": 48527,
    "role": "arabic_shout"
   },
   {
@@ -480,7 +480,7 @@
     "vendor"
    ],
    "duration": null,
-   "bytes": 416640,
+   "bytes": 48527,
    "role": "arabic_shout"
   },
   {
@@ -502,7 +502,7 @@
     "soccer"
    ],
    "duration": null,
-   "bytes": 266592,
+   "bytes": 48527,
    "role": "crowd_shout"
   },
   {
@@ -535,7 +535,7 @@
     "wow"
    ],
    "duration": null,
-   "bytes": 90469,
+   "bytes": 36824,
    "role": "crowd_shout"
   },
   {
@@ -574,7 +574,7 @@
     "yell"
    ],
    "duration": null,
-   "bytes": 396842,
+   "bytes": 48527,
    "role": "crowd_shout"
   },
   {
@@ -604,7 +604,7 @@
     "yelling"
    ],
    "duration": null,
-   "bytes": 457920,
+   "bytes": 48527,
    "role": "crowd_shout"
   },
   {
@@ -622,7 +622,7 @@
     "Slapping"
    ],
    "duration": null,
-   "bytes": 120432,
+   "bytes": 48527,
    "role": "car_hit_person"
   },
   {
@@ -661,7 +661,7 @@
     "screeching-brakes"
    ],
    "duration": null,
-   "bytes": 239136,
+   "bytes": 48527,
    "role": "car_hit_person"
   },
   {
@@ -695,7 +695,7 @@
     "smash"
    ],
    "duration": null,
-   "bytes": 176074,
+   "bytes": 48527,
    "role": "car_hit_person"
   },
   {
@@ -730,7 +730,7 @@
     "thud"
    ],
    "duration": null,
-   "bytes": 242400,
+   "bytes": 48527,
    "role": "car_hit_person"
   },
   {
@@ -751,7 +751,7 @@
     "smash"
    ],
    "duration": null,
-   "bytes": 86605,
+   "bytes": 35779,
    "role": "car_crash"
   },
   {
@@ -768,7 +768,7 @@
     "glass"
    ],
    "duration": null,
-   "bytes": 63610,
+   "bytes": 21568,
    "role": "car_crash"
   },
   {
@@ -788,7 +788,7 @@
     "long-crash"
    ],
    "duration": null,
-   "bytes": 156864,
+   "bytes": 48527,
    "role": "car_crash"
   },
   {
@@ -819,7 +819,7 @@
     "tires-squeal"
    ],
    "duration": null,
-   "bytes": 80199,
+   "bytes": 28047,
    "role": "car_crash"
   },
   {
@@ -838,7 +838,7 @@
     "two-cycle"
    ],
    "duration": null,
-   "bytes": 337287,
+   "bytes": 48527,
    "role": "chainsaw"
   },
   {
@@ -858,7 +858,7 @@
     "zoom"
    ],
    "duration": null,
-   "bytes": 193471,
+   "bytes": 48527,
    "role": "chainsaw"
   },
   {
@@ -886,7 +886,7 @@
     "wobbler"
    ],
    "duration": null,
-   "bytes": 86516,
+   "bytes": 28256,
    "role": "chainsaw"
   },
   {
@@ -910,7 +910,7 @@
     "wood"
    ],
    "duration": null,
-   "bytes": 319704,
+   "bytes": 48527,
    "role": "chainsaw"
   },
   {
@@ -936,7 +936,7 @@
     "walk"
    ],
    "duration": null,
-   "bytes": 207288,
+   "bytes": 48527,
    "role": "tree_fall"
   },
   {
@@ -961,7 +961,7 @@
     "timber"
    ],
    "duration": null,
-   "bytes": 426768,
+   "bytes": 48527,
    "role": "tree_fall"
   },
   {
@@ -982,7 +982,7 @@
     "tree"
    ],
    "duration": null,
-   "bytes": 212400,
+   "bytes": 48527,
    "role": "tree_fall"
   },
   {
@@ -1004,7 +1004,7 @@
     "spine"
    ],
    "duration": null,
-   "bytes": 43296,
+   "bytes": 13000,
    "role": "tree_fall"
   },
   {
@@ -1028,7 +1028,7 @@
     "van"
    ],
    "duration": null,
-   "bytes": 337161,
+   "bytes": 48527,
    "role": "van_door"
   },
   {
@@ -1050,7 +1050,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 57505,
+   "bytes": 19688,
    "role": "van_door"
   },
   {
@@ -1082,7 +1082,7 @@
     "Vehicle"
    ],
    "duration": null,
-   "bytes": 90960,
+   "bytes": 32226,
    "role": "van_door"
   },
   {
@@ -1113,7 +1113,7 @@
     "Yleisradio"
    ],
    "duration": null,
-   "bytes": 403704,
+   "bytes": 48527,
    "role": "van_door"
   },
   {
@@ -1141,7 +1141,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 232608,
+   "bytes": 48527,
    "role": "car_door"
   },
   {
@@ -1164,7 +1164,7 @@
     "trunk"
    ],
    "duration": null,
-   "bytes": 468864,
+   "bytes": 48527,
    "role": "car_door"
   },
   {
@@ -1186,7 +1186,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 129248,
+   "bytes": 44138,
    "role": "car_door"
   },
   {
@@ -1212,7 +1212,7 @@
     "open"
    ],
    "duration": null,
-   "bytes": 18683,
+   "bytes": 6313,
    "role": "car_door"
   },
   {
@@ -1231,7 +1231,7 @@
     "Sneakers"
    ],
    "duration": null,
-   "bytes": 280176,
+   "bytes": 48527,
    "role": "footsteps"
   },
   {
@@ -1250,7 +1250,7 @@
     "wind"
    ],
    "duration": null,
-   "bytes": 302970,
+   "bytes": 48527,
    "role": "footsteps"
   },
   {
@@ -1270,7 +1270,7 @@
     "walks"
    ],
    "duration": null,
-   "bytes": 309489,
+   "bytes": 48527,
    "role": "footsteps"
   },
   {
@@ -1292,7 +1292,7 @@
     "steps"
    ],
    "duration": null,
-   "bytes": 135567,
+   "bytes": 45183,
    "role": "footsteps"
   },
   {
@@ -1310,7 +1310,7 @@
     "whistle"
    ],
    "duration": null,
-   "bytes": 60096,
+   "bytes": 28465,
    "role": "whistle"
   },
   {
@@ -1328,7 +1328,7 @@
     "whistle"
    ],
    "duration": null,
-   "bytes": 72635,
+   "bytes": 27002,
    "role": "whistle"
   },
   {
@@ -1345,7 +1345,7 @@
     "whistle"
    ],
    "duration": null,
-   "bytes": 86155,
+   "bytes": 31181,
    "role": "whistle"
   },
   {
@@ -1363,7 +1363,7 @@
     "Whistles"
    ],
    "duration": null,
-   "bytes": 164904,
+   "bytes": 48527,
    "role": "whistle"
   },
   {
@@ -1384,7 +1384,7 @@
     "transport"
    ],
    "duration": null,
-   "bytes": 448221,
+   "bytes": 48527,
    "role": "siren"
   },
   {
@@ -1403,7 +1403,7 @@
     "Vehicle"
    ],
    "duration": null,
-   "bytes": 318307,
+   "bytes": 48527,
    "role": "siren"
   },
   {
@@ -1428,7 +1428,7 @@
     "woop"
    ],
    "duration": null,
-   "bytes": 185584,
+   "bytes": 48527,
    "role": "siren"
   },
   {
@@ -1446,7 +1446,7 @@
     "Vehicle"
    ],
    "duration": null,
-   "bytes": 363439,
+   "bytes": 48527,
    "role": "siren"
   },
   {
@@ -1483,7 +1483,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 399744,
+   "bytes": 48527,
    "role": "engine_van"
   },
   {
@@ -1508,7 +1508,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 97536,
+   "bytes": 34316,
    "role": "engine_van"
   },
   {
@@ -1527,7 +1527,7 @@
     "vehicle"
    ],
    "duration": null,
-   "bytes": 350603,
+   "bytes": 48527,
    "role": "engine_van"
   },
   {
@@ -1553,7 +1553,7 @@
     "white-noise"
    ],
    "duration": null,
-   "bytes": 274272,
+   "bytes": 48527,
    "role": "engine_van"
   },
   {
@@ -1571,7 +1571,7 @@
     "Vehicle"
    ],
    "duration": null,
-   "bytes": 182551,
+   "bytes": 48527,
    "role": "skid"
   },
   {
@@ -1600,7 +1600,7 @@
     "Winter"
    ],
    "duration": null,
-   "bytes": 177312,
+   "bytes": 48527,
    "role": "skid"
   },
   {
@@ -1621,7 +1621,7 @@
     "tyre"
    ],
    "duration": null,
-   "bytes": 219072,
+   "bytes": 48527,
    "role": "skid"
   },
   {
@@ -1642,7 +1642,7 @@
     "tyre"
    ],
    "duration": null,
-   "bytes": 243936,
+   "bytes": 48527,
    "role": "skid"
   },
   {
@@ -1664,7 +1664,7 @@
     "Traffic"
    ],
    "duration": null,
-   "bytes": 2155248
+   "bytes": 564669
   },
   {
    "file": "fs_388276.mp3",
@@ -1688,7 +1688,7 @@
     "traffic"
    ],
    "duration": null,
-   "bytes": 68980
+   "bytes": 18405
   },
   {
    "file": "fs_212444.mp3",
@@ -1709,7 +1709,7 @@
     "traffic"
    ],
    "duration": null,
-   "bytes": 645051
+   "bytes": 183645
   },
   {
    "file": "fs_23243.mp3",
@@ -1728,7 +1728,7 @@
     "muezzin"
    ],
    "duration": null,
-   "bytes": 2760368
+   "bytes": 720621
   },
   {
    "file": "fs_23244.mp3",
@@ -1747,7 +1747,7 @@
     "street"
    ],
    "duration": null,
-   "bytes": 3275561
+   "bytes": 720621
   },
   {
    "file": "fs_667379.mp3",
@@ -1765,7 +1765,7 @@
     "upper-egypt"
    ],
    "duration": null,
-   "bytes": 2721752
+   "bytes": 707229
   },
   {
    "file": "fs_667380.mp3",
@@ -1783,7 +1783,7 @@
     "soundwalk"
    ],
    "duration": null,
-   "bytes": 2989371
+   "bytes": 720621
   },
   {
    "file": "fs_672931.mp3",
@@ -1803,7 +1803,7 @@
     "traffic"
    ],
    "duration": null,
-   "bytes": 945888
+   "bytes": 243909
   },
   {
    "file": "fs_683118.mp3",
@@ -1819,7 +1819,7 @@
     "street-vendors"
    ],
    "duration": null,
-   "bytes": 1730112
+   "bytes": 453645
   },
   {
    "file": "fs_683120.mp3",
@@ -1839,7 +1839,7 @@
     "water"
    ],
    "duration": null,
-   "bytes": 1705920
+   "bytes": 385605
   },
   {
    "file": "fs_683122.mp3",
@@ -1857,7 +1857,7 @@
     "traffic"
    ],
    "duration": null,
-   "bytes": 1522944
+   "bytes": 398997
   },
   {
    "file": "fs_683123.mp3",
@@ -1876,7 +1876,7 @@
     "soundscape"
    ],
    "duration": null,
-   "bytes": 3175488
+   "bytes": 720621
   },
   {
    "file": "fs_683129.mp3",
@@ -1895,7 +1895,7 @@
     "noise"
    ],
    "duration": null,
-   "bytes": 1451496
+   "bytes": 382581
   },
   {
    "file": "fs_698398.mp3",
@@ -1913,7 +1913,7 @@
     "field-recording"
    ],
    "duration": null,
-   "bytes": 1625376
+   "bytes": 429669
   },
   {
    "file": "fs_851965.mp3",
@@ -1934,7 +1934,7 @@
     "traffic"
    ],
    "duration": null,
-   "bytes": 390912
+   "bytes": 106749
   },
   {
    "file": "fs_421027.mp3",
@@ -1953,7 +1953,7 @@
     "Sufi"
    ],
    "duration": null,
-   "bytes": 1516575
+   "bytes": 419085
   }
  ],
  "textures": [
@@ -2256,18 +2256,6 @@
   }
  ],
  "hdri": [
-  {
-   "id": "kloofendal_43d_clear_puresky",
-   "file": "hdri/kloofendal_43d_clear_puresky_1k.hdr",
-   "license": "CC0",
-   "url": "https://polyhaven.com/a/kloofendal_43d_clear_puresky"
-  },
-  {
-   "id": "syferfontein_1d_clear",
-   "file": "hdri/syferfontein_1d_clear_1k.hdr",
-   "license": "CC0",
-   "url": "https://polyhaven.com/a/syferfontein_1d_clear"
-  },
   {
    "id": "kloofendal_48d_partly_cloudy_puresky",
    "file": "hdri/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
