@@ -31,4 +31,5 @@ jobs:
           git add cairo_microbus/assets
           git diff --cached --quiet && echo "nothing new" && exit 0
           git commit -m "Add downloaded game assets [skip ci]"
-          git push
+          for i in 1 2 3 4; do git pull --rebase -q && git push && exit 0; sleep 10; done
+          exit 1
