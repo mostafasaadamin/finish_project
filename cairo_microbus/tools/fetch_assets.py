@@ -261,14 +261,16 @@ def osm_api_map(hdr):
 
 # ------------------------------------------------------------------ Poly Haven 3D models (CC0): trees, palms, street props
 PH_MODEL_KEYS = ['tree', 'palm']
-PH_MAX_MODELS = 4
+PH_MAX_MODELS = 5
+# real street trees (jacarandas line many Cairo streets), picked by id
+PH_TREE_IDS = ['jacaranda_tree', 'tree_small_02', 'island_tree_01', 'island_tree_02', 'island_tree_03']
 
 
-def slim_model(src_gltf, out_glb):
+def slim_model(src_gltf, out_glb, ratio='0.12'):
     """simplify a heavy scanned model into one small .glb (fewer triangles, 512 px textures)"""
     import subprocess
     cmd = ['npx', '-y', '@gltf-transform/cli@4.1.1', 'optimize', src_gltf, out_glb,
-           '--compress', 'false', '--texture-compress', 'false', '--texture-size', '512', '--simplify-ratio', '0.12', '--simplify-error', '0.004']
+           '--compress', 'false', '--texture-compress', 'false', '--texture-size', '512', '--simplify-ratio', ratio, '--simplify-error', '0.01']
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     print(r.stdout[-800:], r.stderr[-800:], flush=True)
     return r.returncode == 0 and os.path.exists(out_glb)
@@ -284,8 +286,9 @@ def polyhaven_models():
     picked = 0
     credits['models'] = []
     base = os.path.join(ROOT, 'models')
-    for k, v in sorted(assets.items(), key=lambda kv: -kv[1].get('download_count', 0)):
-        if picked >= PH_MAX_MODELS or not any(w in k.lower() for w in PH_MODEL_KEYS):
+    for k in PH_TREE_IDS:
+        v = assets.get(k)
+        if not v or picked >= PH_MAX_MODELS:
             continue
         files = json.loads(get(f'https://api.polyhaven.com/files/{k}') or '{}')
         try:
@@ -311,7 +314,9 @@ def polyhaven_models():
                 f.write(b)
         import shutil
         glb = os.path.join(base, k + '.glb')
-        if ok and slim_model(os.path.join(out, k + '.gltf'), glb) and os.path.getsize(glb) < 8_000_000:
+        if ok and slim_model(os.path.join(out, k + '.gltf'), glb) and os.path.getsize(glb) > 6_000_000:
+            slim_model(os.path.join(out, k + '.gltf'), glb, '0.04')  # still heavy: simplify harder
+        if ok and os.path.exists(glb) and os.path.getsize(glb) < 8_000_000:
             picked += 1
             credits['models'].append({'id': k, 'file': f'models/{k}.glb', 'license': 'CC0', 'url': 'https://polyhaven.com/a/' + k,
                                       'categories': v.get('categories', []), 'tags': v.get('tags', [])})
