@@ -150,7 +150,8 @@
   // 4 columns x 4 floors, each column 3m, each floor 3.2m => 12m x 12.8m per repeat
   M.facadeCanvas = function (base, accent, variant) {
     const c = G.canvas(512, 512), x = c.getContext('2d');
-    const plaster = PH() && G.Assets.image(variant % 2 ? 'plaster2' : 'plaster');
+    const plaster = PH() && G.Assets.image(['plaster', 'plaster2', 'plaster3'][variant % 3]);
+    const wood = PH() && G.Assets.image('shutter');
     if (plaster) {
       // real plaster photo tinted to the building's paint colour
       G.Assets.tileInto(x, plaster, 0, 0, 512, 512, 128);
@@ -178,7 +179,13 @@
         const r = Math.random();
         const sc = G.pick(shutters);
         const drawSlats = (sx, sw) => {
-          x.fillStyle = sc; x.fillRect(sx, wy, sw, wh);
+          if (wood) {
+            // real weathered wood, tinted to the shutter paint
+            x.save(); x.beginPath(); x.rect(sx, wy, sw, wh); x.clip();
+            x.drawImage(wood, G.rand(0, 600), G.rand(0, 600), 300, 300, sx, wy, Math.max(sw, wh), Math.max(sw, wh));
+            x.globalCompositeOperation = 'multiply'; x.fillStyle = sc; x.fillRect(sx, wy, sw, wh);
+            x.restore();
+          } else { x.fillStyle = sc; x.fillRect(sx, wy, sw, wh); }
           x.fillStyle = 'rgba(0,0,0,0.3)';
           for (let k = wy + 4; k < wy + wh; k += 6) x.fillRect(sx + 2, k, sw - 4, 2);
         };

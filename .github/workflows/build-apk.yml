@@ -2,13 +2,16 @@ name: Build Android APK
 
 # Wraps the web game (cairo_microbus/) in a Capacitor Android app and builds a debug APK.
 # The APK is uploaded as a workflow artifact and committed to cairo_microbus/apk/.
+# Runs when cairo_microbus/tools/build_request.txt changes (or manually).
 on:
   push:
     paths:
-      - 'cairo_microbus/**'
-      - '.github/workflows/build-apk.yml'
-      - '!cairo_microbus/apk/**'
+      - 'cairo_microbus/tools/build_request.txt'
   workflow_dispatch:
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -97,12 +100,13 @@ jobs:
           name: CairoMicrobus-apk
           path: build-apk/android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Commit APK to the branch
+      - name: Publish APK on the apk-builds branch (single commit, no history growth)
         run: |
-          mkdir -p cairo_microbus/apk
-          cp build-apk/android/app/build/outputs/apk/debug/app-debug.apk cairo_microbus/apk/CairoMicrobus.apk
+          mkdir -p /tmp/apkout && cp build-apk/android/app/build/outputs/apk/debug/app-debug.apk /tmp/apkout/CairoMicrobus.apk
+          cd /tmp/apkout
+          git init -q -b apk-builds
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cairo_microbus/apk/CairoMicrobus.apk
-          git commit -m "Build CairoMicrobus.apk [skip ci]" || exit 0
-          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
+          echo "Built from ${GITHUB_SHA}" > BUILD.txt
+          git add . && git commit -qm "CairoMicrobus.apk from ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" apk-builds

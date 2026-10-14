@@ -30,13 +30,15 @@
 
   // candidate texture folders per surface, best first
   A.PICK = {
-    asphalt: ['ph_asphalt_02', 'acg_Asphalt025C', 'acg_Asphalt026C', 'ph_aerial_asphalt_01'],
-    sidewalk: ['ph_floor_tiles_06', 'acg_Tiles139', 'acg_PavingStones070', 'ph_granite_tile'],
-    plaster: ['ph_beige_wall_001', 'ph_painted_plaster_wall', 'ph_white_plaster_02', 'acg_Plaster001'],
-    plaster2: ['ph_painted_plaster_wall', 'ph_white_plaster_02', 'ph_beige_wall_001'],
-    concrete: ['ph_concrete_floor_worn_001', 'ph_concrete_floor_02', 'acg_Concrete034'],
-    sand: ['ph_coast_sand_rocks_02', 'ph_rocks_ground_02', 'ph_aerial_beach_01'],
-    metal: ['ph_green_metal_rust', 'ph_rusty_metal_02', 'ph_metal_plate'],
+    asphalt: ['ph_asphalt_02', 'acg_Asphalt031'],
+    sidewalk: ['acg_Tiles143', 'acg_Tiles139'],
+    plaster: ['ph_beige_wall_001', 'ph_white_plaster_02'],
+    plaster2: ['acg_PaintedPlaster006', 'ph_painted_plaster_wall'],   // peeling paint
+    plaster3: ['acg_Plaster007', 'ph_white_plaster_02'],              // dirty, stained
+    concrete: ['acg_Concrete034', 'ph_concrete_floor_worn_001'],
+    sand: ['acg_Ground110', 'ph_coast_sand_rocks_02'],
+    shutter: ['ph_weathered_brown_planks'],
+    metal: ['ph_rusty_metal_02', 'ph_green_metal_rust'],
   };
 
   A.dirs = () => (A.credits ? A.credits.textures.map((t) => t.dir) : []);
