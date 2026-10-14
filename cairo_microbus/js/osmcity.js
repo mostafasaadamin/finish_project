@@ -4,7 +4,7 @@
 // trees, real shop and cafe names. Exposes the same G.World interface as the procedural grid city.
 (function (G) {
   const W = (G.OSM = { ok: false });
-  const DRIVE = { trunk: 16, trunk_link: 7, primary: 14, primary_link: 7, secondary: 12, secondary_link: 7, tertiary: 10, tertiary_link: 6, residential: 7, unclassified: 7, living_street: 5.5, service: 4.5 };
+  const DRIVE = { motorway: 16, motorway_link: 7, trunk: 16, trunk_link: 7, primary: 14, primary_link: 7, secondary: 12, secondary_link: 7, tertiary: 10, tertiary_link: 6, residential: 7, unclassified: 7, living_street: 5.5, service: 4.5 };
   const WALK = { pedestrian: 6, footway: 2.5, path: 2, steps: 2.5 };
   const SW = 3; // sidewalk width along roads
   const CELL = 40; // spatial grid cell
@@ -231,6 +231,16 @@
     return g;
   }
 
+  // convex hull (x/z) - monotone chain
+  function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => a.x - b.x || a.z - b.z);
+    const cross = (o, a, b) => (a.x - o.x) * (b.z - o.z) - (a.z - o.z) * (b.x - o.x);
+    const lo = [], up = [];
+    p.forEach((q) => { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); });
+    p.slice().reverse().forEach((q) => { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); });
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+
   // road texture with markings for a number of lanes
   const roadTexCache = {};
   function roadMaterial(lanes, oneway) {
@@ -272,7 +282,7 @@
 
     // ground: paved city, sand beyond
     const span = Math.max(W.bounds.maxX - W.bounds.minX, W.bounds.maxZ - W.bounds.minZ) + 400;
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(span, span, 20, 20), M.paving);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(span, span, 20, 20), M.ground || M.paving);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     const gUV = ground.geometry.attributes.uv;
@@ -306,9 +316,19 @@
     });
     W.junctions.forEach((j) => {
       if (W.nodeUse.get(j.key) < 2) return;
-      const n = 20, poly = [];
-      for (let i = 0; i < n; i++) poly.push(new THREE.Vector3(j.p.x + Math.cos((i / n) * 6.283) * (j.hw + 1.5), 0, j.p.z + Math.sin((i / n) * 6.283) * (j.hw + 1.5)));
-      const g = polyGeo(poly, 0.065, 8);
+      // corners where each incident road meets the junction, then the convex hull of them
+      const pts = [];
+      W.roadGrid.around(j.p.x, j.p.z, 2).forEach((sg) => {
+        const k = sg.r.keys, i = sg.i;
+        let from = null, to = null;
+        if (k[i] === j.key) { from = sg.a; to = sg.b; } else if (k[i + 1] === j.key) { from = sg.b; to = sg.a; } else return;
+        const L = from.distanceTo(to) || 1, dx = (to.x - from.x) / L, dz = (to.z - from.z) / L, hw = sg.r.w / 2;
+        const d = Math.min(L, j.hw + 1.5);
+        [1, -1].forEach((sd) => pts.push(new THREE.Vector3(from.x + dx * d - dz * hw * sd, 0, from.z + dz * d + dx * hw * sd)));
+      });
+      if (pts.length < 3) return;
+      const hull = convexHull(pts);
+      const g = polyGeo(hull, 0.065, 8);
       if (g) BF.add('asph', M.asphalt, g);
     });
     // pedestrian streets (e.g. passages downtown)
@@ -328,6 +348,33 @@
         }
       }
     });
+
+    // the map misses many buildings: fill holes inside blocks with buildings facing the nearest street
+    const parkHit = (x, z) => W.parks.some((poly) => pointInPoly(x, z, poly)) || W.water.some((poly) => pointInPoly(x, z, poly));
+    const walkHit = (x, z) => W.walks.some((wk) => wk.pts.some((p, i) => i && segDist(x, z, wk.pts[i - 1], p).d < wk.w / 2 + 6));
+    const bd = W.bounds, STEP = 14;
+    let fill = 0;
+    for (let x = bd.minX + 10; x < bd.maxX - 10; x += STEP) {
+      for (let z = bd.minZ + 10; z < bd.maxZ - 10; z += STEP) {
+        const cx = x + G.rand(-2, 2), cz = z + G.rand(-2, 2);
+        const nr = W.nearestRoad(cx, cz, 45);
+        if (!nr || nr.e < SW + 5.5) continue; // keep the sidewalk and a gap to the street
+        if (W.inBuilding(cx, cz) || parkHit(cx, cz) || walkHit(cx, cz)) continue;
+        // footprint aligned with the street
+        const s0 = nr.s, L = s0.a.distanceTo(s0.b) || 1, dx = (s0.b.x - s0.a.x) / L, dz = (s0.b.z - s0.a.z) / L;
+        const hw = 6, hd = 6, poly = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([u, v]) => new THREE.Vector3(cx + dx * u - dz * v, 0, cz + dz * u + dx * v));
+        if (poly.some((p) => W.inBuilding(p.x, p.z) || (W.nearestRoad(p.x, p.z, SW + 4) || { e: 99 }).e < SW + 1)) continue;
+        if (area(poly) > 0) poly.reverse();
+        const b = { poly, h: G.randi(5, 9) * 3.2 + 1, levels: 0, name: '', kind: 'filler' };
+        let minX = 1e9, minZ = 1e9, maxX = -1e9, maxZ = -1e9;
+        poly.forEach((p) => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); });
+        b.box = { minX, minZ, maxX, maxZ };
+        W.buildings.push(b);
+        W.bGrid.add(minX, minZ, maxX, maxZ, b);
+        fill++;
+      }
+    }
+    W.fillers = fill;
 
     // buildings
     const facadeN = M.facades.length;
@@ -352,11 +399,16 @@
         const nr = W.nearestRoad(mx, mz, 14);
         if (!nr || L < 4) continue;
         const dx = (c.x - a.x) / L, dz = (c.z - a.z) / L, nx = -dz, nz = dx; // outward = right of the edge
-        const k = G.randi(0, 7), col = k % 4, row = Math.floor(k / 4);
-        const sh = wall([a, c], 0.07, 0.15, 3.4, L, 1); // just outside the wall
-        if (sh) {
+        // a row of separate shops along the ground floor, ~7 m each
+        const nShops = Math.max(1, Math.round(L / 7)), segL = L / nShops;
+        for (let q = 0; q < nShops; q++) {
+          const p0 = new THREE.Vector3(a.x + dx * q * segL, 0, a.z + dz * q * segL);
+          const p1 = new THREE.Vector3(a.x + dx * ((q + 1) * segL - 0.25), 0, a.z + dz * ((q + 1) * segL - 0.25));
+          const k = G.randi(0, 7), col = k % 4, row = Math.floor(k / 4);
+          const sh = wall([p0, p1], 0.07, 0.15, 3.4, segL, 1); // just outside the wall
+          if (!sh) continue;
           const suv = sh.attributes.uv;
-          for (let q = 0; q < suv.count; q++) suv.setXY(q, (col + G.clamp(suv.getX(q), 0, 1)) / 4, 1 - (row + 1 - suv.getY(q)) / 2);
+          for (let w = 0; w < suv.count; w++) suv.setXY(w, (col + G.clamp(suv.getX(w), 0, 1)) / 4, 1 - (row + 1 - suv.getY(w)) / 2);
           B.add('shops', M.shops, sh);
         }
         if (balconies < MAXBAL) {
@@ -558,11 +610,14 @@
   // stops, cafes, gas station, police checkpoint on the real streets
   W.placeSpots = function () {
     const main = W.paths.filter((p) => /primary|secondary|tertiary/.test(p.r.type) && p.len > 40);
+    const famous = ['طلعت حرب', 'قصر النيل', '26 يوليو', 'شريف', 'عماد الدين', 'محمد فريد', 'رمسيس', 'الجمهوري', 'القصر العيني', 'التحرير'];
     const used = [];
     W.stations = G.STATION_NAMES.map((name, idx) => {
       let pt = null;
+      const want = famous[idx];
+      const pref = want ? W.paths.filter((p) => p.len > 30 && p.r.name.includes(want)) : [];
       for (let k = 0; k < 80 && !pt; k++) {
-        const p = G.pick(main.length ? main : W.paths);
+        const p = G.pick(pref.length && k < 30 ? pref : main.length ? main : W.paths);
         const q = W.pathPoint(p, p.len / 2 + G.rand(-p.len / 4, p.len / 4));
         if (used.some((u) => Math.hypot(u.x - q.x, u.z - q.z) < 110 - k)) continue;
         pt = q;

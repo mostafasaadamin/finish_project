@@ -138,6 +138,9 @@
     Mat.curb = std({ map: Tex.curb, roughness: 0.8 });
     Mat.roof = std({ map: Tex.roof, roughness: 0.95 });
     Mat.sand = std({ map: Tex.sand, roughness: 1 });
+    // dusty city ground (concrete photo, darker and warmer)
+    const gc = photoCanvas(512, 512, 'concrete', 'Color', 256, (x2) => { x2.globalCompositeOperation = 'multiply'; x2.fillStyle = '#a99f8f'; x2.fillRect(0, 0, 512, 512); x2.globalCompositeOperation = 'source-over'; G.noise(x2, 512, 512, 3000, 0.05, true); });
+    Mat.ground = gc ? std({ map: G.tex(gc, true), roughness: 0.95 }) : null;
     Mat.grass = std({ map: Tex.grass, roughness: 1 });
     Mat.water = std({ map: Tex.water, transparent: true, opacity: 0.9, roughness: 0.15, metalness: 0.1 });
     Mat.facades = Tex.facades.map((t) => std({ map: t, normalMap: Tex.facadeN, normalScale: nScale(0.6), roughness: 0.92 }));
