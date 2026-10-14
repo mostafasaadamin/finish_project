@@ -5,7 +5,7 @@ Sounds: Freesound preview MP3s (no login needed) of Cairo / Egypt field recordin
 Textures: CC0 photo materials from ambientCG and Poly Haven.
 Everything goes to cairo_microbus/assets/ with a credits.json listing the license of each file.
 """
-import json, os, re, sys, time, urllib.parse, urllib.request, zipfile, io
+import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request, zipfile, io
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets')
 SND = os.path.join(ROOT, 'sounds')
@@ -14,15 +14,37 @@ UA = {'User-Agent': 'Mozilla/5.0 (cairo-microbus asset fetcher)'}
 credits = {'sounds': [], 'textures': [], 'hdri': [], 'models': []}
 
 
-def get(url, binary=False, tries=3):
+START = time.time()
+BUDGET = float(os.environ.get('FETCH_BUDGET', '900'))  # seconds per group run
+_last_fs = [0.0]
+
+
+def over_budget():
+    return time.time() - START > BUDGET
+
+
+def get(url, binary=False, tries=2):
     for i in range(tries):
+        if over_budget():
+            return None
+        if 'freesound.org' in url:  # be polite: Freesound throttles bursts
+            wait = 1.2 - (time.time() - _last_fs[0])
+            if wait > 0:
+                time.sleep(wait)
+            _last_fs[0] = time.time()
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=25) as r:
                 data = r.read()
                 return data if binary else data.decode('utf-8', 'replace')
+        except urllib.error.HTTPError as e:
+            print('  http', e.code, url, flush=True)
+            if e.code == 429:
+                time.sleep(20)
+            elif e.code in (403, 404):
+                return None
         except Exception as e:  # noqa
-            print('  retry', url, e)
-            time.sleep(2 + i * 3)
+            print('  retry', url, e, flush=True)
+            time.sleep(2)
     return None
 
 
@@ -104,7 +126,7 @@ def fetch_sound(path, seen, role=None, limit=None):
     })
     if role:
         credits['sounds'][-1]['role'] = role
-    print('  +', fname, credits['sounds'][-1]['title'], credits['sounds'][-1]['license'])
+    print('  +', fname, credits['sounds'][-1]['title'], credits['sounds'][-1]['license'], flush=True)
     return True
 
 
@@ -118,6 +140,8 @@ def freesound():
         for l in sound_links(html)[:15]:
             fetch_sound(l, seen)
     for q in SEARCHES:
+        if over_budget():
+            break
         html = get(FS + '/search/?q=' + urllib.parse.quote(q) + '&s=Downloads+(most+first)') or ''
         for l in sound_links(html)[:6]:
             fetch_sound(l, seen)
@@ -125,8 +149,10 @@ def freesound():
 
 def foley():
     os.makedirs(SND, exist_ok=True)
-    seen = {c['id'] for c in credits['sounds']}
+    seen = set()
     for role, queries in FOLEY.items():
+        if over_budget():
+            break
         got = 0
         for q in queries:
             # short sounds first: filter to < 20 s
@@ -339,33 +365,50 @@ def polyhaven():
                 print('  + hdri', k)
 
 
-if __name__ == '__main__':
-    what = sys.argv[1:] or ['sounds', 'ambientcg', 'polyhaven']
-    os.makedirs(ROOT, exist_ok=True)
+def merge():
+    """combine assets/credits.<group>.json files into assets/credits.json"""
     cpath = os.path.join(ROOT, 'credits.json')
-    if os.path.exists(cpath):
-        old = json.load(open(cpath))
-        for k in credits:
-            credits[k] = [c for c in old.get(k, [])]
-    if 'sounds' in what:
-        credits['sounds'] = [c for c in credits['sounds'] if c.get('role')]
-        freesound()
-    if 'foley' in what:
-        credits['sounds'] = [c for c in credits['sounds'] if not c.get('role')]
-        foley()
-    if 'ambientcg' in what or 'polyhaven' in what:
-        credits['textures'] = [c for c in credits['textures'] if
-                               ('ambientcg' not in what or c['source'] != 'ambientCG') and
-                               ('polyhaven' not in what or c['source'] != 'Poly Haven')]
-    if 'ambientcg' in what:
-        ambientcg()
-    if 'osm' in what:
-        osm()
-    if 'models' in what:
-        polyhaven_models()
-    if 'polyhaven' in what:
-        credits['hdri'] = []
-        polyhaven()
-    with open(cpath, 'w') as f:
-        json.dump(credits, f, ensure_ascii=False, indent=1)
-    print('sounds', len(credits['sounds']), 'textures', len(credits['textures']), 'hdri', len(credits['hdri']))
+    merged = json.load(open(cpath)) if os.path.exists(cpath) else {}
+    for k in ('sounds', 'textures', 'hdri', 'models'):
+        merged.setdefault(k, [])
+    parts = sorted(f for f in os.listdir(ROOT) if f.startswith('credits.') and f.endswith('.json') and f != 'credits.json')
+    for f in parts:
+        part = json.load(open(os.path.join(ROOT, f)))
+        group = f.split('.')[1]
+        if group == 'sounds':
+            merged['sounds'] = [c for c in merged['sounds'] if c.get('role')] + part.get('sounds', [])
+        elif group == 'foley':
+            merged['sounds'] = [c for c in merged['sounds'] if not c.get('role')] + part.get('sounds', [])
+        elif group == 'models':
+            merged['models'] = part.get('models', [])
+        os.remove(os.path.join(ROOT, f))
+    with open(cpath, 'w') as fh:
+        json.dump(merged, fh, ensure_ascii=False, indent=1)
+    print('merged', {k: len(v) for k, v in merged.items()})
+
+
+if __name__ == '__main__':
+    what = sys.argv[1:] or ['sounds']
+    os.makedirs(ROOT, exist_ok=True)
+    if what == ['--merge']:
+        merge()
+        sys.exit(0)
+    for group in what:
+        credits['sounds'] = []
+        credits['models'] = []
+        print('== group', group, flush=True)
+        if group == 'sounds':
+            freesound()
+        elif group == 'foley':
+            foley()
+        elif group == 'osm':
+            osm()
+        elif group == 'models':
+            polyhaven_models()
+        elif group == 'ambientcg':
+            ambientcg()
+        elif group == 'polyhaven':
+            polyhaven()
+        with open(os.path.join(ROOT, f'credits.{group}.json'), 'w') as f:
+            json.dump(credits, f, ensure_ascii=False, indent=1)
+        print('done', group, {k: len(v) for k, v in credits.items()}, flush=True)
