@@ -30,12 +30,13 @@ jobs:
       - name: Create Capacitor project
         run: |
           mkdir -p build-apk/www
+          python3 cairo_microbus/tools/make_voice_index.py
           rsync -a --exclude tools --exclude apk --exclude README.md cairo_microbus/ build-apk/www/
           cd build-apk
           cat > package.json <<'EOF'
           { "name": "cairo-microbus", "version": "1.0.0", "private": true }
           EOF
-          npm install --no-audit --no-fund @capacitor/core@^6 @capacitor/cli@^6 @capacitor/android@^6 @capacitor-community/text-to-speech@^4
+          npm install --no-audit --no-fund @capacitor/core@^6 @capacitor/cli@^6 @capacitor/android@^6
           cat > capacitor.config.json <<'EOF'
           {
             "appId": "com.cairo.microbus",
@@ -51,6 +52,8 @@ jobs:
         run: |
           cd build-apk/android/app/src/main
           sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' AndroidManifest.xml
+          # microphone for the in-app voice studio
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application#' AndroidManifest.xml
           # immersive fullscreen + keep the screen awake while driving
           f=$(find java -name MainActivity.java)
           cat > "$f" <<EOF

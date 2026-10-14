@@ -96,7 +96,10 @@
     Pl.collide();
 
     // hard braking with passengers on board
-    if (prevSpeed > 9 && (prevSpeed - Pl.speed) / dt > 10.5) G.Events.reckless();
+    if (prevSpeed > 9 && (prevSpeed - Pl.speed) / dt > 10.5) {
+      G.Events.reckless();
+      if (G.Events.ready('skid', 2)) G.Audio.playSample('skid', null, 0.5, 1.5);
+    }
 
     // blinkers
     if (Pl.blink) {
@@ -155,6 +158,18 @@
         if (rel > hitImpact) { hitImpact = rel; hit = car; }
       }
     }
+    for (const n of G.Combat.npcs) {
+      if (n.state === 'dead' || Math.abs(n.obj.position.x - Pl.pos.x) > 5 || Math.abs(n.obj.position.z - Pl.pos.z) > 5) continue;
+      for (const a of circ) {
+        const dx = n.obj.position.x - a.x, dz = n.obj.position.z - a.z, d = Math.hypot(dx, dz);
+        if (d < a.r + 0.4) {
+          if (!G.Combat.vehicleHit(n.obj, Math.abs(Pl.speed), false) && d > 1e-4) {
+            n.obj.position.x += (dx / d) * (a.r + 0.4 - d); n.obj.position.z += (dz / d) * (a.r + 0.4 - d);
+          }
+          break;
+        }
+      }
+    }
     if (hit && hitImpact > 1.5) {
       Pl.speed *= 0.35;
       hit.speed = 0;
@@ -188,7 +203,9 @@
     Pl.shake = G.clamp(impact / 10, 0.3, 1);
     const dmg = Math.round(G.clamp(impact * 6, 10, 120));
     E.addMoney(-dmg, 'تصليح');
-    if (car && E.ready('otherDriver', 9)) {
+    if (car && impact > 6 && G.chance(0.6) && !G.Foot.active) {
+      G.Combat.angryDriver(car);
+    } else if (car && E.ready('otherDriver', 9)) {
       G.Voice.conversation(G.pick(G.TALK.otherDriver), { driver: null, otherDriver: car.mesh }, 2);
     } else if (Pl.passengers.length && E.ready('crashP', 14)) {
       G.Voice.conversation(G.pick(G.TALK.crashPassengers), busAnchors(), 2);
@@ -197,7 +214,8 @@
 
   E.reckless = function () {
     if (!Pl.passengers.length || !E.ready('reckless', 22)) return;
-    G.Voice.conversation(G.pick(G.TALK.reckless), busAnchors(), 2);
+    E.recklessCount = (E.recklessCount || 0) + 1;
+    G.Voice.conversation(G.pick(G.TALK.reckless), busAnchors(), 2, null, () => { if (E.recklessCount >= 2 && G.chance(0.5)) E.makeAngry(); });
   };
 
   E.blockedYell = function (car) {
@@ -221,10 +239,17 @@
     G.Voice.conversation(G.TALK.hitPedestrian, { driver: null, pedestrian: obj, onlooker: obj }, 2);
   };
 
+  E.makeAngry = function (p) {
+    p = p || G.pick(Pl.passengers);
+    if (!p) return;
+    E.angry = { p, until: now() + 25 };
+    G.HUD.toast('😠 راكب عامل مشكلة… تقدر تنزّله (👋 نزّله)');
+  };
+
   E.pay = function (p) {
     p.paid = true;
     if (G.chance(0.18) && E.ready('dispute', 45)) {
-      G.Voice.conversation(G.pick(G.TALK.fareDispute), busAnchors(), 2, null, () => E.addMoney(10, 'أجرة'));
+      G.Voice.conversation(G.pick(G.TALK.fareDispute), busAnchors(), 2, null, () => { E.addMoney(10, 'أجرة'); E.makeAngry(Pl.passengers.find((q) => q !== p)); });
     } else E.addMoney(10, 'أجرة');
   };
 
@@ -239,8 +264,12 @@
     }
     unpaid.forEach((p) => (p.paid = true));
     const total = unpaid.length * 10;
-    const lines = G.chance(0.35) && E.ready('dispute', 30) ? G.pick(G.TALK.fareDispute) : G.pick(G.TALK.payFare);
-    G.Voice.conversation(lines, busAnchors(), 2, null, () => E.addMoney(total, `أجرة ${G.arDigits(unpaid.length)} ركاب`));
+    const dispute = G.chance(0.35) && E.ready('dispute', 30);
+    const lines = dispute ? G.pick(G.TALK.fareDispute) : G.pick(G.TALK.payFare);
+    G.Voice.conversation(lines, busAnchors(), 2, null, () => {
+      E.addMoney(total, `أجرة ${G.arDigits(unpaid.length)} ركاب`);
+      if (dispute) E.makeAngry(G.pick(unpaid));
+    });
   };
 
   E.callRoute = function () {

@@ -90,7 +90,8 @@
     const per = { traffic: 4, market: 4, horn: 6, musicHorn: 1, muezzin: 1, microbus: 2, cafe: 2 };
     const picked = {};
     list.forEach((s) => {
-      const role = A.sampleRole(s);
+      const role = s.role || A.sampleRole(s); // foley files carry their role from the download
+      if (s.role) per[role] = 4;
       if (!role) return;
       (picked[role] = picked[role] || []);
       if (picked[role].length < per[role]) picked[role].push(s);
@@ -126,6 +127,11 @@
     bed('market', 0);
     bed('microbus', 0);
     bed('cafe', 0);
+    // recorded diesel engine, pitched with the rpm
+    if (A.hasSample('engine_van')) {
+      bed('engine_van', 0);
+      A.engGain.disconnect();
+    }
     // the recordings replace the synthesized hiss
     if (A.beds.traffic) A.synthAmbGain.gain.setTargetAtTime(0.05, A.now(), 1);
     if (A.beds.market) A.crowdGain.gain.setTargetAtTime(0, A.now(), 1);
@@ -229,6 +235,11 @@
   A.updateEngine = function (rpm, throttle, speed, on) {
     if (!A.ready) return;
     const t = A.now();
+    const eb = A.beds && A.beds.engine_van;
+    if (eb) {
+      eb.src.playbackRate.setTargetAtTime(on ? 0.75 + rpm / 4200 : 0.01, t, 0.08);
+      eb.g.gain.setTargetAtTime(on ? 0.22 + throttle * 0.2 : 0, t, 0.1);
+    }
     const f0 = on ? rpm / 30 : 0.0001;
     A.engOsc.forEach(({ o, mul }) => o.frequency.setTargetAtTime(Math.max(1, f0 * mul), t, 0.05));
     A.engFilter.frequency.setTargetAtTime(180 + throttle * 700 + rpm * 0.12, t, 0.08);
@@ -245,6 +256,7 @@
   // ---------- horns ----------
   A.horn = function (on) {
     if (!A.ready) return;
+    if (A.hasSample('horn')) { if (on) A.playSample('horn', null, 0.75, 1.6); return; }
     const t = A.now();
     if (on && !A.hornNodes) {
       const g = A.ctx.createGain();
@@ -298,6 +310,7 @@
   // ---------- one-shots ----------
   A.crash = function (intensity) {
     if (!A.ready) return;
+    if (A.playSample('car_crash', null, G.clamp(intensity, 0.3, 1), 2.5)) return;
     const dest = A.spatial(null, 0, G.clamp(intensity, 0.2, 1) * 0.9);
     const t = A.now();
     A.noiseHit(dest, t, 0.5, 0.9, 'lowpass', 1800);
@@ -309,6 +322,7 @@
 
   A.door = function () {
     if (!A.ready) return;
+    if (A.playSample('van_door', null, 0.5, 2)) return;
     const dest = A.spatial(null, 0, 0.35);
     const t = A.now();
     const f = A.noiseHit(dest, t, 0.45, 0.5, 'bandpass', 600, 2);
@@ -331,6 +345,7 @@
   };
 
   A.whistle = function (pos) {
+    if (A.playSample('whistle', pos, 0.7, 2.5)) return;
     const dest = A.spatial(pos, 120, 0.25);
     if (!dest) return;
     const t = A.now();

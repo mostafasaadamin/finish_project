@@ -1,53 +1,34 @@
 'use strict';
-// Speech: browser Arabic text-to-speech (prefers ar-EG voices), subtitles and 3D speech bubbles.
+// Speech: only real recorded voices (assets/voices/<line id>.*). Lines without a recording
+// are shown as subtitles and speech bubbles. No synthetic / text-to-speech voices.
 (function (G) {
-  const V = (G.Voice = {
-    enabled: true, supported: 'speechSynthesis' in window, voices: [], byGender: { m: null, f: null },
-    queue: [], current: null, bubbles: [], hasArabic: false, voiceLabel: '',
-  });
-  const FEMALE = /salma|hoda|zariyah|laila|layla|mariam|maryam|amina|fatima|hala|sana|rana|noura|imane|amal|reem|dalia|zeina|amany|female|woman/i;
-  const MALE = /shakir|naayf|hamed|maged|tarik|omar|bassel|hamdan|fahed|saleh|moaz|rami|taim|male|man\b/i;
+  const V = (G.Voice = { enabled: true, queue: [], current: null, bubbles: [], files: {}, buffers: {}, voiceLabel: '' });
 
-  // Inside the Android app (Capacitor) the WebView has no speechSynthesis: use the native TTS plugin
-  const nativeTTS = () => {
-    const C = window.Capacitor;
-    return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.TextToSpeech;
+  V.init = async function () {
+    try {
+      const r = await fetch('assets/voices/index.json', { cache: 'no-cache' });
+      if (r.ok) V.files = (await r.json()).files || {};
+    } catch (e) { /* no recordings yet */ }
+    // recordings made on this device in the studio
+    V.local = new Set(G.VoiceStore ? await G.VoiceStore.ids() : []);
+    const n = new Set(Object.keys(V.files).concat([...V.local])).size;
+    V.voiceLabel = n ? `أصوات متسجّلة: ${n} جملة` : 'لسه مفيش أصوات متسجّلة – الكلام بيظهر ترجمة بس';
+    if (G.HUD) G.HUD.voiceStatus();
   };
 
-  V.init = function () {
-    const tts = nativeTTS();
-    if (tts) {
-      V.native = tts;
-      V.supported = true;
-      V.voiceLabel = 'الصوت: نطق أندرويد العربي';
-      tts.getSupportedLanguages().then((r) => {
-        const langs = (r && r.languages) || [];
-        V.nativeLang = langs.find((l) => /^ar[-_]EG/i.test(l)) || langs.find((l) => /^ar/i.test(l)) || null;
-        V.hasArabic = !!V.nativeLang;
-        if (!V.hasArabic) V.voiceLabel = 'نزّل صوت عربي من إعدادات أندرويد (Text-to-speech) – هتظهر الترجمة بس دلوقتي';
-        if (G.HUD) G.HUD.voiceStatus();
-      }).catch(() => { V.nativeLang = 'ar-EG'; V.hasArabic = true; });
-      return;
+  V.hasRecording = (text) => { const id = G.lineId(text); return !!(V.files[id] || (V.local && V.local.has(id))); };
+
+  // decode (and cache) the recording of a line
+  V.buffer = function (text) {
+    const id = G.lineId(text), f = V.files[id], local = V.local && V.local.has(id);
+    if ((!f && !local) || !G.Audio.ctx) return Promise.resolve(null);
+    if (!V.buffers[id]) {
+      // the player's own recording wins over the bundled one
+      const bytes = local ? G.VoiceStore.get(id).then((b) => b.arrayBuffer()) : fetch('assets/voices/' + f).then((r) => r.arrayBuffer());
+      V.buffers[id] = bytes
+        .then((b) => new Promise((res, rej) => G.Audio.ctx.decodeAudioData(b, res, rej))).catch(() => null);
     }
-    if (!V.supported) { V.voiceLabel = 'المتصفح ده مش بيدعم الصوت'; return; }
-    const pick = () => {
-      const vs = speechSynthesis.getVoices();
-      const ar = vs.filter((v) => /^ar/i.test(v.lang));
-      // Egyptian first, then natural/online voices, then any Arabic
-      const score = (v) => (/EG/i.test(v.lang) ? 4 : 0) + (/natural|online|neural/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
-      ar.sort((a, b) => score(b) - score(a));
-      V.voices = ar;
-      V.hasArabic = ar.length > 0;
-      V.byGender.f = ar.find((v) => FEMALE.test(v.name)) || null;
-      V.byGender.m = ar.find((v) => MALE.test(v.name)) || ar.find((v) => !FEMALE.test(v.name)) || ar[0] || null;
-      if (!V.byGender.f) V.byGender.f = ar[0] || null;
-      V.voiceLabel = V.hasArabic
-        ? 'الصوت: ' + (V.byGender.m ? V.byGender.m.name : ar[0].name)
-        : 'مفيش صوت عربي متسطّب على الجهاز – هتظهر الترجمة بس';
-      if (G.HUD) G.HUD.voiceStatus();
-    };
-    pick();
-    speechSynthesis.onvoiceschanged = pick;
+    return V.buffers[id];
   };
 
   // anchor: THREE.Object3D, Vector3 or null (inside the microbus)
@@ -65,8 +46,9 @@
 
   // lines: [[who, text], ...]; anchors: {who: anchor} ; vars replaces {dest}
   V.conversation = function (lines, anchors, prio, vars, onDone) {
-    let i = 0;
+    let i = 0, stopped = false;
     const next = () => {
+      if (stopped) return;
       if (i >= lines.length) { if (onDone) onDone(); return; }
       const [who, raw] = lines[i++];
       const text = V.fill(raw, vars);
@@ -74,13 +56,13 @@
       V.say(who, text, anchor, prio == null ? 1 : prio, () => setTimeout(next, 120));
     };
     next();
+    return { stop: () => { stopped = true; } };
   };
 
   V.fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : s);
 
   V.stopCurrent = function () {
-    if (V.native) V.native.stop().catch(() => {});
-    else if (V.supported) speechSynthesis.cancel();
+    if (V.current && V.current.src) { try { V.current.src.stop(); } catch (e) { /* already stopped */ } }
   };
 
   V.pump = function () {
@@ -112,32 +94,23 @@
     };
     let fallback = setTimeout(finish, est + 300);
 
-    let vol = 1;
-    if (item.anchor && G.Player) {
-      const p = item.anchor.isObject3D ? item.anchor.getWorldPosition(new THREE.Vector3()) : item.anchor;
-      vol = G.clamp(1.15 - G.dist2(p, G.Player.pos) / 70, 0, 1);
-    }
-    if (V.enabled && V.native && V.hasArabic && vol > 0.08) {
+    if (!V.enabled || !V.hasRecording(item.text)) return;
+    clearTimeout(fallback);
+    fallback = setTimeout(finish, est + 4000); // until the recording is decoded
+    const pos = item.anchor ? (item.anchor.isObject3D ? item.anchor.getWorldPosition(new THREE.Vector3()) : item.anchor) : null;
+    V.buffer(item.text).then((buf) => {
+      if (!buf || done) return;
+      const dest = G.Audio.spatial(pos, 80, 1);
+      if (!dest) return;
+      const src = G.Audio.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(dest);
+      src.onended = finish;
+      item.src = src;
       clearTimeout(fallback);
-      fallback = setTimeout(finish, est * 2.5 + 3000);
-      V.native.speak({ text: item.text, lang: V.nativeLang, rate: spk.rate, pitch: G.clamp(spk.pitch, 0.5, 1.8), volume: vol, category: 'playback' })
-        .then(finish, finish);
-    } else if (V.enabled && V.supported && !V.native && V.hasArabic && vol > 0.08) {
-      const u = new SpeechSynthesisUtterance(item.text);
-      const voice = V.byGender[spk.g] || V.voices[0];
-      u.voice = voice;
-      u.lang = voice ? voice.lang : 'ar-EG';
-      // if we only have one voice, shift pitch more to tell characters apart
-      const sameVoice = V.byGender.m === V.byGender.f;
-      u.pitch = G.clamp(sameVoice ? spk.pitch : 1 + (spk.pitch - 1) * 0.4, 0.1, 2);
-      u.rate = spk.rate;
-      u.volume = vol;
-      u.onend = finish;
-      u.onerror = finish;
-      clearTimeout(fallback);
-      fallback = setTimeout(finish, est * 2.5 + 3000);
-      speechSynthesis.speak(u);
-    }
+      fallback = setTimeout(finish, buf.duration * 1000 + 1500);
+      src.start();
+    });
   };
 
   V.subtitle = function (item) {

@@ -78,6 +78,23 @@
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   function updateCamera(dt, snap) {
     const Pl = G.Player, cam = Main.camera;
+    if (G.Foot.active) {
+      // third person behind the driver on foot
+      const Fo = G.Foot, fx = Math.sin(Fo.heading), fz = Math.cos(Fo.heading);
+      // pull the camera in if it would end up inside a building
+      let back = 4.2;
+      for (let b = 0.5; b <= 4.2; b += 0.25) if (G.Combat.inBuilding(Fo.pos.x - fx * b, Fo.pos.z - fz * b)) { back = Math.max(0.6, b - 0.5); break; }
+      tmp.set(Fo.pos.x - fx * back, Fo.pos.y + 2.4, Fo.pos.z - fz * back);
+      tmp2.set(Fo.pos.x + fx * 2, Fo.pos.y + 1.3, Fo.pos.z + fz * 2);
+      const k = 1 - Math.exp(-dt * 7);
+      camPos.lerp(tmp, k); camLook.lerp(tmp2, k);
+      Pl.mesh.visible = true;
+      cam.position.copy(camPos);
+      cam.lookAt(camLook);
+      if (cam.fov !== 62) { cam.fov = 62; cam.updateProjectionMatrix(); }
+      G.Audio.listener.x = Fo.pos.x; G.Audio.listener.z = Fo.pos.z; G.Audio.listener.h = Fo.heading;
+      return;
+    }
     const f = Pl.fwd();
     const rev = Pl.speed < -0.5 && Main.camMode !== 2;
     if (Main.camMode === 2) {
@@ -115,6 +132,8 @@
     A.setBed('traffic', 0.4 + G.clamp(Math.abs(Pl.speed) / 30, 0, 0.25));
   }
 
+  const NEUTRAL = { steer: 0, gas: 0, brake: 1, kbUp: false, kbDown: false, kbLeft: false, kbRight: false, handbrake: true, wheelActive: false };
+
   function loop() {
     requestAnimationFrame(loop);
     const now = performance.now();
@@ -124,7 +143,14 @@
     Main.t += dt;
     const I = G.Input;
     if (!I.wheelActive) I.steer = (I.kbRight ? 1 : 0) - (I.kbLeft ? 1 : 0);
-    G.Player.update(dt);
+    if (G.Foot.active) {
+      // nobody at the wheel: the microbus just rolls to a stop
+      const real = G.Input;
+      G.Input = NEUTRAL;
+      G.Player.update(dt);
+      G.Input = real;
+    } else G.Player.update(dt);
+    G.Combat.updateAll(dt);
     G.Traffic.update(dt);
     G.People.update(dt);
     G.Events.update(dt);

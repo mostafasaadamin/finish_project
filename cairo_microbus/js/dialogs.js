@@ -1,6 +1,15 @@
 'use strict';
 // كل الحوارات بالعامية المصرية
 (function (G) {
+  // Stable id of a spoken line (FNV-1a of the exact text). The recording of a line is saved as
+  // assets/voices/<id>.<ext>; the recording studio page (record.html) uses the same function.
+  G.lineId = function (text) {
+    let h = 0x811c9dc5;
+    const t = String(text).trim();
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return 'l' + h.toString(16).padStart(8, '0');
+  };
+
   // g: gender for picking a TTS voice, pitch/rate tweak the voice per character
   G.SPK = {
     driver: { name: 'الأسطى (إنت)', g: 'm', pitch: 0.85, rate: 1.08, color: '#ffd54a' },
@@ -24,6 +33,7 @@
     sayes: { name: 'السايس', g: 'm', pitch: 0.75, rate: 1.05, color: '#b39ddb' },
     ahwa: { name: 'زبون القهوة', g: 'm', pitch: 0.6, rate: 0.95, color: '#a1887f' },
     waiter: { name: 'القهوجي', g: 'm', pitch: 1.0, rate: 1.15, color: '#ffcc80' },
+    worker: { name: 'عامل الحي', g: 'm', pitch: 0.8, rate: 1.05, color: '#ffb74d' },
   };
 
   G.STATION_NAMES = ['رمسيس', 'التحرير', 'العتبة', 'الدقي', 'السيدة زينب', 'الحسين', 'شبرا', 'الجيزة', 'ماسبيرو'];
@@ -169,5 +179,46 @@
     gas: [['attendant', 'نفوّل يا اسطى؟ تمانين ولا تسعين؟'], ['driver', 'فوّل تمانين يا معلم.'], ['attendant', 'من عينيا يا باشا.']],
     gasNoMoney: [['attendant', 'الفلوس مش مكفية يا اسطى!'], ['driver', 'خلاص… حط اللي يجي بيه.']],
     start: [['driver', 'يلا بينا… على الله!']],
+  };
+
+  // ---------- الأحداث التفاعلية ----------
+  G.TALK2 = {
+    provoked: ['إنت بتضربني ليه يا جدع؟! تعالى هنا!', 'يا نهار أبيض! ده أنا هوريك!', 'إنت اتجننت؟ ده أنا هكسّر دماغك!'],
+    joinFight: [['onlooker', 'يا نهار أبيض! السواق بيضرب الناس!'], ['fighterA', 'إنت مالك إنت؟ إنت داخل في الموضوع ليه؟'], ['fighterB', 'ده إنت ليلتك سودا النهارده!']],
+    bothDown: ['جدع يا اسطى… بس كده كتير!', 'يا ساتر! وقّعهم الاتنين!', 'حد يجيب مية للراجل ده!'],
+    separated: [['fighterA', 'خلاص… عشان خاطرك إنت بس يا اسطى.'], ['fighterB', 'حقك عليا… هو أخويا برضه.'], ['onlooker', 'جدع يا اسطى! ربنا يكتّر من أمثالك.']],
+    kickOut: ['انزل يا أستاذ! مش عايز فلوسك!', 'انزل من العربية… العربية دي مش ناقصة!', 'على جنب وانزل! يلا!'],
+    kickedHostile: [['passenger', 'تنزّلني أنا؟ طب استنى عليا!'], ['passenger', 'انزل لو راجل يا اسطى!']],
+    kickedCalm: ['ربنا يسامحك يا اسطى… نازل.', 'ماشي… هركب غيرك وأوفّر فلوسي.'],
+    otherDriverOut: ['انزل يا اسطى! انزل لو راجل!', 'إنت فاكر نفسك هتمشي كده؟ استنى!', 'العربية اتبهدلت! هتدفع يعني هتدفع!'],
+    killed: [['onlooker', 'يا ساتر يا رب! الراجل مات!'], ['onlooker2', 'امسكوه! ماتسيبوش يهرب!'], ['pedestrianF', 'حد يطلب الإسعاف بسرعة!']],
+    arrested: [['police', 'إنت يا ميكروباص! انزل… إنت مطلوب!'], ['driver', 'يا باشا والله ما كانش قصدي!'], ['officer', 'الكلام ده تقوله في القسم.']],
+    crew: ['حاسب يا اسطى، الشجرة هتقع!', 'اركن بعيد شوية يا باشا، إحنا بنقطع الشجرة!', 'خلي بالك من الفروع يا اسطى!'],
+  };
+
+  // every spoken line in the game, with its speaker, for the recording studio
+  G.allLines = function () {
+    const out = [], seen = {};
+    const add = (who, text) => {
+      const texts = text.includes('{dest}') ? G.STATION_NAMES.map((d) => text.replace(/\{dest\}/g, d)) : [text];
+      texts.forEach((t) => { const id = G.lineId(t); if (!seen[id]) { seen[id] = 1; out.push({ id, who, text: t }); } });
+    };
+    // lists of plain strings: who says them
+    const SOLO = {
+      callRoute: 'driver', askFare: 'driver', stopRequest: 'passenger', blocked: 'otherDriver', kickOut: 'driver',
+      kickedCalm: 'passenger', provoked: 'pedestrian', bothDown: 'onlooker', otherDriverOut: 'otherDriver', crew: 'worker',
+    };
+    const walk = (key, v) => {
+      if (typeof v === 'string') add(SOLO[key] || 'passenger', v);
+      else if (Array.isArray(v) && v.length === 2 && typeof v[0] === 'string' && typeof v[1] === 'string' && G.SPK[v[0]]) add(v[0], v[1]);
+      else if (Array.isArray(v)) v.forEach((x) => walk(key, x));
+    };
+    Object.entries(G.TALK).forEach(([k, v]) => walk(k, v));
+    Object.entries(G.TALK2).forEach(([k, v]) => walk(k, v));
+    G.FIGHTS.forEach((f) => f.lines.forEach(([w, t]) => add(w, t)));
+    G.VENDORS.forEach((v) => v.lines.forEach((t) => add(v.kid ? 'kid' : 'vendor', t)));
+    G.SAYES_LINES.forEach((t) => add('sayes', t));
+    G.AHWA_LINES.forEach(([w, t]) => add(w, t));
+    return out;
   };
 })(window.G);

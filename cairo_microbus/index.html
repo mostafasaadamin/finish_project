@@ -42,6 +42,15 @@
       <button id="musichorn" class="act" title="كلاكس مزيكا (J)">🎺<span>مزيكا</span></button>
     </div>
 
+    <div id="hpBar" class="hidden"><span>❤️</span><div><i id="hpFill"></i></div></div>
+    <div id="footBtns">
+      <button id="exitBtn" class="act wide" title="انزل / اركب (B)">🚪<span>انزل</span></button>
+      <button id="kickBtn" class="act wide hidden" title="نزّل الراكب (N)">👋<span>نزّله</span></button>
+      <button id="punchBtn" class="round big hidden" title="اضرب (Space)">👊</button>
+      <button id="holdBtn" class="round big hidden" title="احجز بينهم (G)">✋<i id="holdFill"></i></button>
+    </div>
+    <div id="flash"></div>
+
     <div id="blinkers">
       <button id="blinkL" class="round arrow" title="إشارة شمال (Q)">⬅</button>
       <button id="hazard" class="round" title="انتظار (X)">⚠</button>
@@ -49,6 +58,7 @@
     </div>
 
     <div id="wheel" aria-label="الدريكسيون">
+      <div id="joyKnob"></div>
       <svg viewBox="0 0 200 200">
         <circle cx="100" cy="100" r="88" fill="none" stroke="#1d1d1d" stroke-width="18"/>
         <circle cx="100" cy="100" r="88" fill="none" stroke="#3a3a3a" stroke-width="4"/>
@@ -83,8 +93,10 @@
         <div><kbd>Space</kbd> فرامل · <kbd>H</kbd> كلاكس · <kbd>J</kbd> كلاكس مزيكا</div>
         <div><kbd>C</kbd> نادي على الركاب · <kbd>F</kbd> لمّ الأجرة · <kbd>R</kbd> كاسيت</div>
         <div><kbd>Q</kbd>/<kbd>E</kbd> إشارات · <kbd>X</kbd> انتظار · <kbd>V</kbd> الكاميرا · <kbd>P</kbd> إيقاف</div>
+        <div><kbd>B</kbd> انزل/اركب · <kbd>Space</kbd> اضرب (وإنت ماشي) · <kbd>G</kbd> احجز · <kbd>N</kbd> نزّل الراكب</div>
       </div>
       <button id="resumeBtn" class="btn">كمّل سواقة ▶</button>
+      <a class="btn ghost" href="record.html">🎙️ استوديو الأصوات</a>
     </div>
   </div>
 
@@ -101,7 +113,8 @@
       </ul>
       <p id="loadStatus" class="small">بيحمّل…</p>
       <button id="startBtn" class="btn" disabled>يلا بينا… على الله! ▶</button>
-      <p class="small">🔊 شغّل الصوت. الكلام بيستخدم الصوت العربي اللي على جهازك (أحسن حاجة Edge أو Chrome).</p>
+      <a class="btn ghost" href="record.html">🎙️ سجّل أصوات الشخصيات بصوتك</a>
+      <p class="small">🔊 شغّل الصوت. كل الأصوات تسجيلات حقيقية، والجمل اللي لسه متسجّلتش بتظهر ترجمة.</p>
     </div>
   </div>
 
@@ -109,6 +122,7 @@
   <script src="js/RGBELoader.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/assets.js"></script>
+  <script src="js/voicestore.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/dialogs.js"></script>
   <script src="js/voice.js"></script>
@@ -117,6 +131,7 @@
   <script src="js/traffic.js"></script>
   <script src="js/people.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/combat.js"></script>
   <script src="js/hud.js"></script>
   <script src="js/main.js"></script>
 </body>

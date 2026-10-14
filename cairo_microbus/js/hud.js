@@ -33,7 +33,8 @@
       else if (['arrowdown', 's'].includes(k)) I.kbDown = v;
       else if (['arrowleft', 'a'].includes(k)) I.kbLeft = v;
       else if (['arrowright', 'd'].includes(k)) I.kbRight = v;
-      else if (k === ' ') I.handbrake = v;
+      else if (k === ' ') { if (G.Foot.active) { if (v) G.Foot.punch(); } else I.handbrake = v; }
+      else if (k === 'g') I.hold = v;
       else if (k === 'h') G.Audio.horn(v);
       else return false;
       return true;
@@ -52,6 +53,8 @@
       else if (k === 'e') H.setBlink(1);
       else if (k === 'x') H.setBlink(2);
       else if (k === 'p' || k === 'escape') H.togglePause();
+      else if (k === 'b') (G.Foot.active ? G.Foot.enter() : G.Foot.exit());
+      else if (k === 'n') G.Combat.kickPassenger();
     });
     window.addEventListener('keyup', (e) => set(e, false));
     window.addEventListener('blur', () => { I.kbUp = I.kbDown = I.kbLeft = I.kbRight = I.handbrake = false; I.gas = I.brake = 0; G.Audio.horn(false); });
@@ -74,14 +77,23 @@
       const r = w.getBoundingClientRect();
       return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
     };
+    const joy = (e) => {
+      const r = w.getBoundingClientRect();
+      const jx = G.clamp((e.clientX - (r.left + r.width / 2)) / (r.width / 2), -1, 1);
+      const jy = G.clamp((e.clientY - (r.top + r.height / 2)) / (r.height / 2), -1, 1);
+      G.Foot.joy.x = jx; G.Foot.joy.y = jy;
+      $('joyKnob').style.transform = `translate(${jx * 60}%,${jy * 60}%)`;
+    };
     w.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       w.setPointerCapture(e.pointerId);
+      if (G.Foot.active) { H.joyActive = true; joy(e); return; }
       I.wheelActive = true;
       startA = lastA = angle(e);
       baseRot = rot = G.Player.steer * 135;
     });
     w.addEventListener('pointermove', (e) => {
+      if (H.joyActive) { joy(e); return; }
       if (!I.wheelActive) return;
       const a = angle(e);
       let d = a - lastA;
@@ -91,7 +103,11 @@
       rot = G.clamp(rot + (d * 180) / Math.PI, -135, 135);
       I.steer = rot / 135;
     });
-    const release = () => { I.wheelActive = false; I.steer = 0; };
+    const release = () => {
+      I.wheelActive = false; I.steer = 0;
+      H.joyActive = false; G.Foot.joy.x = G.Foot.joy.y = 0;
+      $('joyKnob').style.transform = '';
+    };
     w.addEventListener('pointerup', release);
     w.addEventListener('pointercancel', release);
     void startA; void baseRot;
@@ -100,6 +116,10 @@
     hold($('brake'), () => (I.brake = 1), () => (I.brake = 0));
     hold($('horn'), () => G.Audio.horn(true), () => G.Audio.horn(false));
     tap('musichorn', () => G.Audio.musicHorn());
+    tap('exitBtn', () => (G.Foot.active ? G.Foot.enter() : G.Foot.exit()));
+    tap('kickBtn', () => G.Combat.kickPassenger());
+    hold($('punchBtn'), () => G.Foot.punch(), () => {});
+    hold($('holdBtn'), () => (I.hold = true), () => (I.hold = false));
     tap('gearD', () => H.setGear('D'));
     tap('gearR', () => H.setGear('R'));
     tap('blinkL', () => H.setBlink(-1));
@@ -115,9 +135,22 @@
     tap('resumeBtn', () => H.togglePause());
     tap('voiceBtn', () => {
       G.Voice.enabled = !G.Voice.enabled;
-      if (!G.Voice.enabled && G.Voice.supported) G.Voice.stopCurrent();
+      if (!G.Voice.enabled) G.Voice.stopCurrent();
       H.voiceStatus();
     });
+  };
+
+  H.setMode = function (mode) {
+    $('hud').classList.toggle('foot', mode === 'foot');
+    $('exitBtn').querySelector('span').textContent = mode === 'foot' ? 'اركب' : 'انزل';
+    $('punchBtn').classList.toggle('hidden', mode !== 'foot');
+    $('hpBar').classList.toggle('hidden', mode !== 'foot');
+    I.kbUp = I.kbDown = I.kbLeft = I.kbRight = false; I.gas = I.brake = 0;
+  };
+  H.flash = function () {
+    const f = $('flash');
+    f.classList.add('on');
+    setTimeout(() => f.classList.remove('on'), 60);
   };
 
   H.setGear = function (g) {
@@ -141,8 +174,7 @@
     G.Main.paused = !G.Main.paused;
     $('pause').classList.toggle('hidden', !G.Main.paused);
     if (G.Audio.ctx) G.Main.paused ? G.Audio.ctx.suspend() : G.Audio.ctx.resume();
-    if (G.Voice.supported && !G.Voice.native) G.Main.paused ? speechSynthesis.pause() : speechSynthesis.resume();
-    if (G.Main.paused) G.Voice.stopCurrent();
+        if (G.Main.paused) G.Voice.stopCurrent();
   };
 
   H.voiceStatus = function () {
@@ -185,7 +217,13 @@
     $('gearD').classList.toggle('on', Pl.gear === 'D');
     $('gearR').classList.toggle('on', Pl.gear === 'R');
     ['blinkL', 'blinkR', 'hazard'].forEach((id, k) => $(id).classList.toggle('on', Pl.blinkOn && Pl.blink === [-1, 1, 2][k]));
-    H.wheel.style.transform = `rotate(${Pl.steer * 135}deg)`;
+    H.wheel.style.transform = G.Foot.active ? '' : `rotate(${Pl.steer * 135}deg)`;
+    const E = G.Events;
+    $('kickBtn').classList.toggle('hidden', !(E.angry && performance.now() / 1000 < E.angry.until && !G.Foot.active));
+    $('holdBtn').classList.toggle('hidden', !G.Foot.canSeparate);
+    $('holdFill').style.height = Math.min(100, (G.Foot.holdT / 2.4) * 100) + '%';
+    if (G.Foot.active) $('hpFill').style.width = G.Foot.hp + '%';
+    $('exitBtn').classList.toggle('dim', !G.Foot.active && Math.abs(Pl.speed) > 1.5);
     if (frame % 15 === 0) H.updateNext();
     H.drawMinimap();
     H.drawGauges();

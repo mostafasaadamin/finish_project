@@ -132,6 +132,8 @@
     const out = [];
     for (const w of P.walkers) if (w.mode === 'cross') out.push(w.obj);
     for (const b of P.boarding || []) out.push(b.obj);
+    for (const n of G.Combat.npcs) if (n.obj.position.y < 0.1) out.push(n.obj);
+    if (G.Foot.active && G.Foot.pos.y < 0.1) out.push(G.Foot.obj);
     return out;
   };
 
@@ -150,7 +152,7 @@
     const C = G.City, NR = C.NR;
 
     // ---- walkers ----
-    for (const w of P.walkers) {
+    for (const w of P.walkers.slice()) {
       const o = w.obj;
       const d = G.dist2(o.position, ppos);
       if (w.fallT > 0) {
@@ -201,10 +203,8 @@
         for (const c of near) {
           const dx = o.position.x - c.x, dz = o.position.z - c.z, dd = Math.hypot(dx, dz);
           if (dd < c.r + 0.45) {
-            if (Math.abs(Pl.speed) > 7) {
-              w.fallT = 3.2;
-              G.Events.hitPedestrian(o);
-            } else if (w.yellT <= 0) {
+            if (G.Combat.vehicleHit(o, Math.abs(Pl.speed), true)) break;
+            if (w.yellT <= 0) {
               w.yellT = 8;
               G.Events.pedestrianYell(o, w.obj.userData.kind === 'woman');
             }
@@ -280,11 +280,11 @@
       return;
     }
     f.t += dt;
-    f.cast.forEach((c, k) => M().animPerson(c, f.done ? 'idle' : k < 2 ? 'fight' : k === 2 ? 'wave' : 'idle', dt));
-    const d = G.dist2(f.pos, Pl.pos);
+    f.cast.forEach((c, k) => { if (k === 2 && !f.done && c.userData.npc && c.userData.npc.state === 'idle') M().animPerson(c, 'wave', dt); });
+    const d = G.dist2(f.pos, G.Foot.active ? G.Foot.pos : Pl.pos);
     G.Audio.setCrowd(f.done ? 0.015 : G.clamp(0.09 - d / 1500, 0.015, 0.09));
     if ((f.done && f.t > f.doneAt + 8) || d > 220) {
-      f.cast.forEach((c) => P.scene.remove(c));
+      f.cast.forEach((c) => (c.userData.npc ? G.Combat.remove(c.userData.npc) : P.scene.remove(c)));
       P.fight = null;
       G.Audio.setCrowd(0.015);
     }
@@ -330,7 +330,12 @@
     const f = (P.fight = { pos, cast, t: 0, done: false, doneAt: 0 });
     G.Audio.crowdBurst(pos, 3);
     G.HUD.toast('⚠️ خناقة في الشارع قدامك: ' + script.title);
-    G.Voice.conversation(script.lines, anchors, 1, null, () => { f.done = true; f.doneAt = f.t; });
+    G.Combat.registerFight(f, script, cast);
+    f.convo = G.Voice.conversation(script.lines, anchors, 1, null, () => {
+      if (f.joined) return;
+      f.done = true; f.doneAt = f.t;
+      f.npcs.forEach((n) => { if (n.state === 'brawl') n.state = 'idle'; });
+    });
     return true;
   };
 })(window.G);
