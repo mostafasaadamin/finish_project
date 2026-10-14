@@ -38,7 +38,7 @@
     <div id="actions">
       <button id="callBtn" class="act" title="نادي على الركاب (C)">📣<span>نادي</span></button>
       <button id="fareBtn" class="act" title="لمّ الأجرة (F)">💰<span>الأجرة</span></button>
-      <button id="radioBtn" class="act" title="الكاسيت (R)">📻<span>كاسيت</span></button>
+      <button id="radioBtn" class="act" title="الكاسيت (M)">📻<span>كاسيت</span></button>
       <button id="musichorn" class="act" title="كلاكس مزيكا (J)">🎺<span>مزيكا</span></button>
     </div>
 
@@ -74,24 +74,25 @@
 
     <button id="horn" class="round big" title="كلاكس (H)">📯</button>
     <div id="pedals">
+      <div id="clutch" class="pedal clutch" title="دبرياج / كلتش (Shift)"></div>
       <div id="brake" class="pedal brake" title="فرامل (↓ / Space)"></div>
       <div id="gas" class="pedal gas" title="بنزين (↑)"></div>
     </div>
-    <div id="gearbox">
-      <button id="gearD" class="gear on">D</button>
-      <button id="gearR" class="gear">R</button>
-    </div>
+    <div id="lever" title="الفتيس: اسحبه زي الحقيقي (1-5 / R / 0)"></div>
+    <button id="keyBtn" class="round big hidden" title="دوّر العربية (I)">🔑</button>
   </div>
 
   <div id="pause" class="overlay hidden">
     <div class="card">
       <h2>⏸ استراحة يا اسطى</h2>
       <button id="voiceBtn" class="btn ghost">🔊 أصوات الكلام: شغّالة</button>
+      <button id="clutchBtn" class="btn ghost">⚙️ الكلتش: أوتوماتيك</button>
       <p id="voiceStatus" class="small"></p>
       <div class="help">
         <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> سواقة (↓ وإنت واقف = رجوع)</div>
-        <div><kbd>Space</kbd> فرامل · <kbd>H</kbd> كلاكس · <kbd>J</kbd> كلاكس مزيكا</div>
-        <div><kbd>C</kbd> نادي على الركاب · <kbd>F</kbd> لمّ الأجرة · <kbd>R</kbd> كاسيت</div>
+        <div><kbd>Space</kbd> فرامل · <kbd>H</kbd> كلاكس (أو دوس نص الدريكسيون) · <kbd>J</kbd> كلاكس مزيكا</div>
+        <div>الفتيس: <kbd>1</kbd>…<kbd>5</kbd> · <kbd>R</kbd> ورا · <kbd>0</kbd> مور · <kbd>Shift</kbd> كلتش · <kbd>I</kbd> دوّر العربية</div>
+        <div><kbd>C</kbd> نادي على الركاب · <kbd>F</kbd> لمّ الأجرة · <kbd>M</kbd> كاسيت</div>
         <div><kbd>Q</kbd>/<kbd>E</kbd> إشارات · <kbd>X</kbd> انتظار · <kbd>V</kbd> الكاميرا · <kbd>P</kbd> إيقاف</div>
         <div><kbd>B</kbd> انزل/اركب · <kbd>Space</kbd> اضرب (وإنت ماشي) · <kbd>G</kbd> احجز · <kbd>N</kbd> نزّل الراكب</div>
       </div>
@@ -135,6 +136,8 @@
   <script src="js/traffic.js"></script>
   <script src="js/osmtraffic.js"></script>
   <script src="js/people.js"></script>
+  <script src="js/RoomEnvironment.js"></script>
+  <script src="js/gearbox.js"></script>
   <script src="js/player.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/hud.js"></script>

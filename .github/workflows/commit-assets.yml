@@ -1,0 +1,63 @@
+name: Commit fetched assets
+
+# Takes the artifacts of an earlier "Fetch game assets" run (run id in
+# cairo_microbus/tools/commit_request.txt) and commits them in small pushes.
+on:
+  push:
+    paths:
+      - 'cairo_microbus/tools/commit_request.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read run id
+        id: r
+        run: echo "run=$(tr -dc 0-9 < cairo_microbus/tools/commit_request.txt)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          run-id: ${{ steps.r.outputs.run }}
+          github-token: ${{ github.token }}
+      - name: Merge, filter and commit in batches
+        run: |
+          set -e
+          for d in parts/*/; do [ -d "$d" ] && cp -r "$d". cairo_microbus/assets/; done
+          cd cairo_microbus/assets
+          # keep only tree / palm / plant models, nothing over 20 MB
+          if [ -f credits.models.json ]; then
+            python3 - <<'EOF'
+          import json, os, shutil
+          c = json.load(open('credits.models.json'))
+          keep = [m for m in c.get('models', []) if any(w in ' '.join([m['id']] + m.get('tags', []) + m.get('categories', [])).lower() for w in ('tree', 'palm', 'plant', 'bush'))][:5]
+          ids = {m['id'] for m in keep}
+          for d in os.listdir('models') if os.path.isdir('models') else []:
+              if d not in ids:
+                  shutil.rmtree(os.path.join('models', d))
+          c['models'] = keep
+          json.dump(c, open('credits.models.json', 'w'), ensure_ascii=False, indent=1)
+          print('kept models', sorted(ids))
+          EOF
+          fi
+          find . -type f -size +20M -print -delete
+          cd ../..
+          python3 cairo_microbus/tools/fetch_assets.py --merge
+          du -sh cairo_microbus/assets/* || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          push() { for i in 1 2 3 4; do git pull --rebase -q && git push && return 0; sleep 15; done; return 1; }
+          for part in osm credits.json sounds polyhaven_models_index.json models; do
+            [ -e "cairo_microbus/assets/$part" ] || continue
+            git add "cairo_microbus/assets/$part"
+            git diff --cached --quiet && continue
+            git commit -qm "Add downloaded game assets: $part [skip ci]"
+            push
+          done

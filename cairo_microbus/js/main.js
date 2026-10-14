@@ -168,6 +168,7 @@
     G.Tex.water.offset.y = Main.t * 0.004;
     G.HUD.update();
     Main.renderer.render(Main.scene, Main.camera);
+    if (!G.Foot.active) G.Gearbox.renderLever(dt, Main.t);
     G.Voice.updateBubbles(Main.camera, window.innerWidth, window.innerHeight);
   }
 
@@ -195,6 +196,7 @@
     G.Player.init(Main.scene);
     linearizeMaterials(Main.scene);
     G.HUD.init();
+    G.Gearbox.initLever(document.getElementById('lever'));
     G.Voice.init();
     updateCamera(0, true);
     Main.renderer.render(Main.scene, Main.camera);
@@ -214,7 +216,8 @@
     document.getElementById('hud').classList.remove('hidden');
     G.HUD.resizeCanvases();
     G.Voice.conversation(G.TALK.start, { driver: null }, 2);
-    setTimeout(() => G.HUD.toast('اطلع على أول موقف ولمّ ركاب – الموقف الأزرق على الخريطة 🗺️'), 1500);
+    setTimeout(() => G.HUD.toast('العربية مانيوال: اسحب الفتيس على ١ ودوس بنزين 🚐'), 1200);
+    setTimeout(() => G.HUD.toast('اطلع على أول موقف ولمّ ركاب – الموقف الأزرق على الخريطة 🗺️'), 5000);
     if (document.documentElement.requestFullscreen && isMobile) document.documentElement.requestFullscreen().catch(() => {});
   }
 

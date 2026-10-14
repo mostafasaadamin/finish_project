@@ -3,7 +3,7 @@
 (function (G) {
   const Pl = (G.Player = {
     pos: new THREE.Vector3(), heading: 0, speed: 0, steer: 0, gear: 'D', throttle: 0, braking: false,
-    fuel: 35, maxFuel: 60, money: 300, passengers: [], cap: 14, len: 4.8, wid: 1.9, rpm: 800, gearN: 1,
+    fuel: 35, maxFuel: 60, money: 300, passengers: [], cap: 14, len: 4.8, wid: 1.9, rpm: 800,
     blink: 0, blinkOn: false, blinkT: 0, shake: 0, delivered: 0, earned: 0, type: 'microbus',
   });
   const PASSENGER_VOICES = ['passenger', 'passengerF', 'oldman', 'passenger2', 'passengerF'];
@@ -44,54 +44,40 @@
 
   const circ = [], carCirc = [];
   Pl.update = function (dt) {
-    const I = G.Input;
-    const engineOn = Pl.fuel > 0;
+    const I = G.Input, GB = G.Gearbox;
     const prevSpeed = Pl.speed;
 
     // steering (touch wheel is direct, keyboard is smoothed)
     if (I.wheelActive) Pl.steer = I.steer;
     else Pl.steer += (I.steer - Pl.steer) * Math.min(1, dt * (I.steer === 0 ? 5 : 2.6));
 
-    // throttle / brake / auto reverse on keyboard
-    let thr = 0, brk = I.brake;
-    if (I.kbUp) { if (Pl.speed < -0.5) brk = 1; else { Pl.gear = 'D'; thr = 1; } }
-    if (I.kbDown) { if (Pl.speed > 0.5) brk = 1; else { Pl.gear = 'R'; thr = 1; } }
-    if (I.gas > 0) thr = Math.max(thr, I.gas);
-    if (I.handbrake) brk = 1;
-    if (!engineOn) thr = 0;
+    // manual gearbox: gas, brake and clutch pedals; gears from the lever or keys
+    let thr = Math.max(I.kbUp ? 1 : 0, I.gas || 0);
+    let brk = Math.max(I.kbDown ? 1 : 0, I.brake || 0, I.handbrake ? 1 : 0);
+    if (!GB.engineOn) thr = 0;
     Pl.throttle = thr;
-    const MAX = 29;
-    if (Pl.gear === 'D') {
-      if (Pl.speed >= -0.2) Pl.speed += thr * 4.3 * (1 - Pl.speed / MAX) * dt;
-      else brk = Math.max(brk, thr);
-    } else {
-      if (Pl.speed <= 0.2) Pl.speed -= thr * 3 * (1 + Pl.speed / 7) * dt;
-      else brk = Math.max(brk, thr);
-    }
+    const eng = GB.update(dt, thr);
+    Pl.speed += eng.acc * dt;
+    if (eng.eb > 0) Pl.speed = Pl.speed > 0 ? Math.max(0, Pl.speed - eng.eb * dt) : Math.min(0, Pl.speed + eng.eb * dt);
     if (brk > 0) {
       const b = brk * 13 * dt;
       Pl.speed = Pl.speed > 0 ? Math.max(0, Pl.speed - b) : Math.min(0, Pl.speed + b);
     }
-    const drag = (0.35 + 0.0015 * Pl.speed * Pl.speed) * dt;
+    const drag = (0.3 + 0.0016 * Pl.speed * Pl.speed) * dt;
     Pl.speed = Pl.speed > 0 ? Math.max(0, Pl.speed - drag) : Math.min(0, Pl.speed + drag);
     Pl.braking = brk > 0.1;
+    Pl.gear = GB.label();
+    const engineOn = GB.engineOn;
 
     const sa = (Pl.steer * 0.6) / (1 + Math.abs(Pl.speed) * 0.05);
     Pl.heading -= (Pl.speed / 2.6) * Math.tan(sa) * dt;
     Pl.pos.x += Math.sin(Pl.heading) * Pl.speed * dt;
     Pl.pos.z += Math.cos(Pl.heading) * Pl.speed * dt;
 
-    Pl.fuel = Math.max(0, Pl.fuel - (0.003 + thr * 0.045) * dt);
+    if (engineOn) Pl.fuel = Math.max(0, Pl.fuel - (0.003 + thr * (GB.rpm / GB.RED) * 0.05) * dt);
 
-    // engine rpm with an automatic gearbox
-    const s = Math.abs(Pl.speed), TH = [0, 5, 10, 16, 22, 31];
-    let g = 1;
-    while (g < 5 && s > TH[g]) g++;
-    Pl.gearN = g;
-    let rpm = 1000 + ((s - TH[g - 1]) / (TH[g] - TH[g - 1])) * 3200;
-    if (s < 0.5) rpm = 800 + thr * 2600;
-    Pl.rpm += (G.clamp(rpm, 700, 4800) - Pl.rpm) * Math.min(1, dt * 6);
-    G.Audio.updateEngine(Pl.rpm, thr, Pl.speed, engineOn);
+    Pl.rpm = GB.rpm;
+    G.Audio.updateEngine(Math.max(GB.rpm, 1), thr, Pl.speed, engineOn);
 
     Pl.collide();
 
@@ -101,6 +87,12 @@
       if (G.Events.ready('skid', 2)) G.Audio.playSample('skid', null, 0.5, 1.5);
     }
 
+    // blinkers cancel themselves once the turn is done, like a real car
+    if (Pl.blink === 1 || Pl.blink === -1) {
+      if (Pl.blinkStartH == null) Pl.blinkStartH = Pl.heading;
+      const turned = Math.abs(G.angleDiff(Pl.blinkStartH, Pl.heading));
+      if (turned > 0.9 && Math.abs(Pl.steer) < 0.15) { Pl.blink = 0; Pl.blinkStartH = null; }
+    } else Pl.blinkStartH = null;
     // blinkers
     if (Pl.blink) {
       Pl.blinkT -= dt;

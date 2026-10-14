@@ -36,6 +36,7 @@
       else if (k === ' ') { if (G.Foot.active) { if (v) G.Foot.punch(); } else I.handbrake = v; }
       else if (k === 'g') I.hold = v;
       else if (k === 'h') G.Audio.horn(v);
+      else if (k === 'shift') I.clutch = v;
       else return false;
       return true;
     };
@@ -48,7 +49,11 @@
       else if (k === 'f') G.Events.collectFare();
       else if (k === 'c') G.Events.callRoute();
       else if (k === 'v') H.cycleCamera();
-      else if (k === 'r') H.toggleRadio();
+      else if (k === 'm') H.toggleRadio();
+      else if (k === 'r') G.Gearbox.shift(-1);
+      else if (k === '0' || k === 'n' && false) G.Gearbox.shift(0);
+      else if (/^[1-5]$/.test(k)) G.Gearbox.shift(+k);
+      else if (k === 'i') G.Gearbox.start();
       else if (k === 'q') H.setBlink(-1);
       else if (k === 'e') H.setBlink(1);
       else if (k === 'x') H.setBlink(2);
@@ -88,6 +93,9 @@
       e.preventDefault();
       w.setPointerCapture(e.pointerId);
       if (G.Foot.active) { H.joyActive = true; joy(e); return; }
+      // the middle of the wheel is the horn, like a real car
+      const r = w.getBoundingClientRect();
+      if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height * 0.56)) < r.width * 0.17) { H.hubHorn = true; G.Audio.horn(true); return; }
       I.wheelActive = true;
       startA = lastA = angle(e);
       baseRot = rot = G.Player.steer * 135;
@@ -104,6 +112,7 @@
       I.steer = rot / 135;
     });
     const release = () => {
+      if (H.hubHorn) { H.hubHorn = false; G.Audio.horn(false); }
       I.wheelActive = false; I.steer = 0;
       H.joyActive = false; G.Foot.joy.x = G.Foot.joy.y = 0;
       $('joyKnob').style.transform = '';
@@ -120,8 +129,13 @@
     tap('kickBtn', () => G.Combat.kickPassenger());
     hold($('punchBtn'), () => G.Foot.punch(), () => {});
     hold($('holdBtn'), () => (I.hold = true), () => (I.hold = false));
-    tap('gearD', () => H.setGear('D'));
-    tap('gearR', () => H.setGear('R'));
+    hold($('clutch'), () => (I.clutch = true), () => (I.clutch = false));
+    tap('keyBtn', () => G.Gearbox.start());
+    tap('clutchBtn', () => {
+      G.Gearbox.clutchManual = !G.Gearbox.clutchManual;
+      try { localStorage.setItem('cm_clutch', G.Gearbox.clutchManual ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+      H.voiceStatus();
+    });
     tap('blinkL', () => H.setBlink(-1));
     tap('blinkR', () => H.setBlink(1));
     tap('hazard', () => H.setBlink(2));
@@ -159,6 +173,7 @@
   };
   H.setBlink = function (v) {
     G.Player.blink = G.Player.blink === v ? 0 : v;
+    G.Player.blinkStartH = null;
     G.Player.blinkT = 0;
   };
   H.toggleRadio = function () {
@@ -182,6 +197,8 @@
     if (el) el.textContent = G.Voice.voiceLabel || 'بيدوّر على صوت عربي…';
     const b = $('voiceBtn');
     if (b) b.textContent = G.Voice.enabled ? '🔊 أصوات الكلام: شغّالة' : '🔇 أصوات الكلام: مقفولة';
+    const cb = $('clutchBtn');
+    if (cb) cb.textContent = G.Gearbox.clutchManual ? '⚙️ الكلتش: يدوي (بالدواسة – ممكن العربية تفصل)' : '⚙️ الكلتش: أوتوماتيك';
   };
 
   H.toast = function (text) {
@@ -214,8 +231,7 @@
     $('fuelPill').classList.toggle('low', Pl.fuel < 8);
     const name = G.World.roadName(Pl.pos.x, Pl.pos.z);
     if (name && name !== H.lastRoad) { H.lastRoad = name; $('street').textContent = name; }
-    $('gearD').classList.toggle('on', Pl.gear === 'D');
-    $('gearR').classList.toggle('on', Pl.gear === 'R');
+    $('keyBtn').classList.toggle('hidden', G.Gearbox.engineOn || G.Foot.active);
     ['blinkL', 'blinkR', 'hazard'].forEach((id, k) => $(id).classList.toggle('on', Pl.blinkOn && Pl.blink === [-1, 1, 2][k]));
     H.wheel.style.transform = G.Foot.active ? '' : `rotate(${Pl.steer * 135}deg)`;
     const E = G.Events;
@@ -317,13 +333,13 @@
       x.fillText(label, cx, cy + r * 0.4);
     };
     const kmh = Math.abs(Pl.speed) * 3.6;
-    dial(62 * k, 95 * k, 52 * k, Pl.rpm / 1000, 6, 1, 'RPM x1000', 4.5);
+    dial(62 * k, 95 * k, 52 * k, Pl.rpm / 1000, 6, 1, 'RPM x1000', 4.8);
     dial(258 * k, 95 * k, 52 * k, Pl.fuel, Pl.maxFuel, 15, 'FUEL', null);
     dial(160 * k, 82 * k, 74 * k, kmh, 140, 20, 'km/h', null);
     x.fillStyle = '#fff'; x.font = `bold ${Math.round(24 * k)}px Arial`; x.textAlign = 'center';
     x.fillText(String(Math.round(kmh)), 160 * k, 128 * k);
-    x.fillStyle = Pl.gear === 'R' ? '#ff5252' : '#69f0ae';
+    x.fillStyle = Pl.gear === 'R' ? '#ff5252' : Pl.gear === 'N' ? '#ffd54a' : '#69f0ae';
     x.font = `bold ${Math.round(16 * k)}px Arial`;
-    x.fillText(Pl.gear === 'R' ? 'R' : 'D' + Pl.gearN, 160 * k, 52 * k);
+    x.fillText(Pl.gear, 160 * k, 52 * k);
   };
 })(window.G);
