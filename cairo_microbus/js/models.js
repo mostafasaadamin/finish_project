@@ -401,7 +401,26 @@
   };
 
   // returns { mesh, len, wid, maxSpeed, type }
-  M.vehicle = function (type) {
+  M.vehicle = function (type, opts) {
+    if (G.Vehicles) {
+      // detailed vehicles; the body group tilts, wheels spin inside it
+      const SPEED = { microbus: 15, taxi: 15, tuktuk: 9, bus: 11, pickup: 13, police: 15 };
+      // the player's microbus keeps separate parts; traffic bodies are baked into a few meshes
+      const vb = opts && opts.player ? Object.assign(G.Vehicles.microbus(), { blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] }) : G.Vehicles.make(type);
+      const group = new THREE.Group();
+      group.add(vb.root);
+      if (!Mat.blink) Mat.blink = new THREE.MeshBasicMaterial({ color: 0xffa000 });
+      const blink = { L: [], R: [] };
+      [[1, 'L'], [-1, 'R']].forEach(([sx, side]) => [vb.blinkF, vb.blinkR].forEach(([x, y, z]) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.02), Mat.blink);
+        m.position.set(sx * x, y, z);
+        m.visible = false;
+        vb.root.add(m);
+        blink[side].push(m);
+      }));
+      const len = vb.len || 4.8, wid = vb.wid || 1.9;
+      return { mesh: group, body: vb.root, len, wid, maxSpeed: SPEED[type] || 16, type, blink, wheels: vb.wheels };
+    }
     let parts, len, wid, maxSpeed;
     switch (type) {
       case 'microbus': parts = M.microbusParts(); len = 4.8; wid = 1.9; maxSpeed = 15; break;

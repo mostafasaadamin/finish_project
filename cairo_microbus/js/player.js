@@ -9,32 +9,26 @@
   const PASSENGER_VOICES = ['passenger', 'passengerF', 'oldman', 'passenger2', 'passengerF'];
 
   Pl.init = function (scene) {
-    const v = G.Models.vehicle('microbus');
+    const v = G.Models.vehicle('microbus', { player: true });
     Pl.mesh = v.mesh;
     Pl.body = v.body;
     scene.add(Pl.mesh);
-    const plateGeo = new THREE.PlaneGeometry(0.52, 0.26);
-    const rear = new THREE.Mesh(plateGeo, G.Mat.plate);
-    rear.position.set(0, 0.62, -2.52); rear.rotation.y = Math.PI;
-    const front = new THREE.Mesh(plateGeo, G.Mat.plate);
-    front.position.set(0, 0.6, 2.52);
+    Pl.wheels = v.wheels || [];
+    const plateGeo = new THREE.PlaneGeometry(0.46, 0.23);
+    const plateMat = G.Vehicles ? new THREE.MeshStandardMaterial({ map: G.Vehicles.plateTex(true), roughness: 0.5 }) : G.Mat.plate;
+    const rear = new THREE.Mesh(plateGeo, plateMat);
+    rear.position.set(0, 0.52, -2.585); rear.rotation.y = Math.PI;
+    const front = new THREE.Mesh(plateGeo, plateMat);
+    front.position.set(0, 0.52, 2.59);
     Pl.body.add(rear, front);
-    // brake lights + blinkers
-    const bm = (Pl.brakeMat = new THREE.MeshBasicMaterial({ color: '#550000' }));
-    [0.82, -0.82].forEach((x) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.2), bm);
-      m.position.set(x, 1.1, -2.45); m.rotation.y = Math.PI;
+    // brake lights glow over the tail lamps; blinkers come with the model
+    const bm = (Pl.brakeMat = new THREE.MeshBasicMaterial({ color: '#550000', transparent: true, opacity: 0.0 }));
+    [0.83, -0.83].forEach((x) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.4), bm);
+      m.position.set(x, 0.98, -2.535); m.rotation.y = Math.PI;
       Pl.body.add(m);
     });
-    Pl.blinkers = { L: [], R: [] };
-    const om = new THREE.MeshBasicMaterial({ color: '#ffab00' });
-    [[0.82, 2.45, 'L'], [-0.82, 2.45, 'R'], [0.82, -2.45, 'L'], [-0.82, -2.45, 'R']].forEach(([x, z, side]) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.04), om);
-      m.position.set(x, z > 0 ? 0.65 : 0.82, z + Math.sign(z) * 0.0);
-      m.visible = false;
-      Pl.body.add(m);
-      Pl.blinkers[side].push(m);
-    });
+    Pl.blinkers = v.blink;
     const s = G.World.STATIONS[0];
     Pl.heading = s.heading;
     Pl.pos.copy(s.stopPos).addScaledVector(new THREE.Vector3(Math.sin(s.heading), 0, Math.cos(s.heading)), -28);
@@ -59,10 +53,14 @@
       if (!GB.engineOn) GB.engineOn = true;
       if (GB.gear === -1) {
         if (thr > 0 && Pl.speed > -0.6) { GB.shift(1); }
-        else { const t = thr; thr = brk; brk = t; }
+        else { const t = thr; thr = Pl.speed < -4 ? 0 : brk * 0.7; brk = t; } // reverse is slow
       } else {
-        Pl.revHold = brk > 0 && thr === 0 && Math.abs(Pl.speed) < 0.4 ? (Pl.revHold || 0) + dt : 0;
-        if (Pl.revHold > 0.6) { GB.shift(-1); Pl.revHold = 0; G.HUD.toast('ورا ⬇️ (دوس فرامل عشان ترجع، بنزين عشان تقدّم)'); }
+        // reverse only on a fresh brake press made while already standing still
+        const pressed = brk > 0 && thr === 0;
+        if (pressed && !Pl.brkWas) Pl.revArmed = Math.abs(Pl.speed) < 0.3;
+        Pl.brkWas = pressed;
+        Pl.revHold = pressed && Pl.revArmed && Math.abs(Pl.speed) < 0.3 ? (Pl.revHold || 0) + dt : 0;
+        if (Pl.revHold > 0.45) { GB.shift(-1); Pl.revHold = 0; Pl.revArmed = false; G.HUD.toast('ورا ⬇️ (دوس فرامل عشان ترجع، بنزين عشان تقدّم)'); }
         if (GB.gear === 0 && thr > 0) GB.shift(1);
       }
     }
@@ -112,7 +110,9 @@
     } else Pl.blinkOn = false;
     Pl.blinkers.L.forEach((m) => (m.visible = Pl.blinkOn && (Pl.blink === -1 || Pl.blink === 2)));
     Pl.blinkers.R.forEach((m) => (m.visible = Pl.blinkOn && (Pl.blink === 1 || Pl.blink === 2)));
-    Pl.brakeMat.color.set(Pl.braking ? '#ff1a1a' : '#550000');
+    Pl.brakeMat.color.set('#ff1a1a');
+    Pl.brakeMat.opacity = Pl.braking ? 0.9 : 0;
+    if (G.Vehicles && Pl.wheels.length) G.Vehicles.updateWheels(Pl.wheels, Pl.speed, Pl.steer, dt);
 
     Pl.mesh.position.set(Pl.pos.x, 0, Pl.pos.z);
     Pl.mesh.rotation.y = Pl.heading;
