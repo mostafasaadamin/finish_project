@@ -82,6 +82,12 @@
     return true;
   };
 
-  A.hdri = () => (A.credits && A.credits.hdri.length ? BASE + A.credits.hdri[0].file : null);
+  // a daytime sky (skip night / moonless HDRIs)
+  A.hdri = () => {
+    const list = (A.credits && A.credits.hdri) || [];
+    const day = list.filter((h) => !/night|moon|dusk|sunset/i.test(h.id));
+    const pick = day.find((h) => /partly_cloudy|clear_puresky/.test(h.id)) || day[0];
+    return pick ? BASE + pick.file : null;
+  };
   A.sounds = () => (A.credits ? A.credits.sounds : []);
 })(window.G);

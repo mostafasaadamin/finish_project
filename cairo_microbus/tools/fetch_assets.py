@@ -11,7 +11,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets')
 SND = os.path.join(ROOT, 'sounds')
 TEX = os.path.join(ROOT, 'textures')
 UA = {'User-Agent': 'Mozilla/5.0 (cairo-microbus asset fetcher)'}
-credits = {'sounds': [], 'textures': [], 'hdri': []}
+credits = {'sounds': [], 'textures': [], 'hdri': [], 'models': []}
 
 
 def get(url, binary=False, tries=3):
@@ -75,7 +75,10 @@ def fetch_sound(path, seen, role=None, limit=None):
     html = get(FS + path)
     if not html:
         return
-    audio = re.search(r'<meta property="og:audio" content="([^"]+)"', html)
+    # the page's og:audio tag holds a doubled "https://freesound.orghttps://cdn..." address: take the cdn link
+    previews = re.findall(r'https://cdn\.freesound\.org/previews/[^"\s]+?-[hl]q\.mp3', html)
+    hq = [u for u in previews if u.endswith('-hq.mp3')]
+    audio = hq[0] if hq else (previews[0].replace('-lq.mp3', '-hq.mp3') if previews else None)
     if not audio:
         print('  no preview', path)
         return
@@ -84,7 +87,7 @@ def fetch_sound(path, seen, role=None, limit=None):
     lic = re.search(r'href="(https?://creativecommons\.org/[^"]+)"', html)
     tags = re.findall(r'href="/browse/tags/([^/"]+)/?"', html)
     dur = re.search(r'"duration"[^0-9]*([0-9.]+)', html)
-    data = get(audio.group(1), binary=True)
+    data = get(audio, binary=True) or get(audio.replace('-hq.mp3', '-lq.mp3'), binary=True)
     if not data or len(data) > MAX_BYTES:
         print('  skip size', path)
         return
@@ -135,6 +138,107 @@ def foley():
                     got += 1
             if got >= FOLEY_PER_ROLE:
                 break
+
+
+# ------------------------------------------------------------------ OpenStreetMap: real downtown Cairo
+# Tahrir square, Talaat Harb, Qasr El Nil, Abdel Moneim Riad and the Nile corniche (© OpenStreetMap contributors, ODbL)
+OSM_BBOX = (30.0395, 31.2300, 30.0545, 31.2465)  # south, west, north, east
+
+
+def osm():
+    s_, w_, n_, e_ = OSM_BBOX
+    q = f"""[out:json][timeout:120];
+(
+  way["highway"]({s_},{w_},{n_},{e_});
+  way["building"]({s_},{w_},{n_},{e_});
+  relation["building"]({s_},{w_},{n_},{e_});
+  way["leisure"~"park|garden"]({s_},{w_},{n_},{e_});
+  way["landuse"~"grass|park"]({s_},{w_},{n_},{e_});
+  way["natural"="water"]({s_},{w_},{n_},{e_});
+  relation["natural"="water"]({s_},{w_},{n_},{e_});
+  way["waterway"="riverbank"]({s_},{w_},{n_},{e_});
+  node["natural"="tree"]({s_},{w_},{n_},{e_});
+  node["amenity"~"cafe|restaurant|pharmacy|bank|fuel|place_of_worship"]({s_},{w_},{n_},{e_});
+  node["shop"]({s_},{w_},{n_},{e_});
+  node["highway"="traffic_signals"]({s_},{w_},{n_},{e_});
+);
+out body geom;"""
+    for url in ('https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'):
+        try:
+            data = urllib.request.urlopen(urllib.request.Request(url, data=urllib.parse.urlencode({'data': q}).encode(), headers=UA), timeout=180).read()
+            j = json.loads(data)
+            break
+        except Exception as e:  # noqa
+            print('  overpass failed', url, e)
+            j = None
+    if not j:
+        return
+    os.makedirs(os.path.join(ROOT, 'osm'), exist_ok=True)
+    # keep it compact: only the tags and geometry the game uses
+    keep = ('highway', 'name', 'name:ar', 'name:en', 'lanes', 'width', 'oneway', 'building', 'building:levels', 'height',
+            'leisure', 'landuse', 'natural', 'waterway', 'amenity', 'shop', 'layer', 'bridge', 'tunnel', 'service', 'area')
+    out = []
+    for el in j.get('elements', []):
+        tags = {k: v for k, v in el.get('tags', {}).items() if k in keep}
+        if el['type'] == 'node':
+            out.append({'t': 'n', 'tags': tags, 'g': [round(el['lat'], 7), round(el['lon'], 7)]})
+        elif el['type'] == 'way' and 'geometry' in el:
+            out.append({'t': 'w', 'tags': tags, 'g': [[round(p['lat'], 7), round(p['lon'], 7)] for p in el['geometry']]})
+        elif el['type'] == 'relation':
+            outer = [[[round(p['lat'], 7), round(p['lon'], 7)] for p in m.get('geometry', [])] for m in el.get('members', []) if m.get('role') == 'outer' and m.get('geometry')]
+            if outer:
+                out.append({'t': 'r', 'tags': tags, 'g': outer})
+    with open(os.path.join(ROOT, 'osm', 'downtown.json'), 'w') as f:
+        json.dump({'bbox': OSM_BBOX, 'attribution': '© OpenStreetMap contributors (ODbL)', 'elements': out}, f, ensure_ascii=False, separators=(',', ':'))
+    print('  + osm elements', len(out))
+
+
+# ------------------------------------------------------------------ Poly Haven 3D models (CC0): trees, palms, street props
+PH_MODEL_KEYS = ['tree', 'palm', 'bush', 'plant', 'street', 'lamp', 'bench', 'bin', 'trash', 'barrier', 'cone', 'crate', 'chair', 'table']
+PH_MAX_MODELS = 16
+
+
+def polyhaven_models():
+    j = get('https://api.polyhaven.com/assets?t=models')
+    if not j:
+        return
+    assets = json.loads(j)
+    with open(os.path.join(ROOT, 'polyhaven_models_index.json'), 'w') as f:
+        json.dump({k: {'name': v.get('name'), 'categories': v.get('categories'), 'tags': v.get('tags')} for k, v in assets.items()}, f, ensure_ascii=False)
+    picked = 0
+    credits['models'] = []
+    base = os.path.join(ROOT, 'models')
+    for k, v in sorted(assets.items(), key=lambda kv: -kv[1].get('download_count', 0)):
+        text = ' '.join([k] + v.get('categories', []) + v.get('tags', [])).lower()
+        if picked >= PH_MAX_MODELS or not any(w in text for w in PH_MODEL_KEYS):
+            continue
+        files = json.loads(get(f'https://api.polyhaven.com/files/{k}') or '{}')
+        try:
+            g = files['gltf']['1k']['gltf']
+        except KeyError:
+            continue
+        out = os.path.join(base, k)
+        os.makedirs(out, exist_ok=True)
+        data = get(g['url'], binary=True)
+        if not data:
+            continue
+        with open(os.path.join(out, k + '.gltf'), 'wb') as f:
+            f.write(data)
+        ok = True
+        for rel, inc in (g.get('include') or {}).items():
+            b = get(inc['url'], binary=True)
+            if b is None:
+                ok = False
+                break
+            dst = os.path.join(out, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, 'wb') as f:
+                f.write(b)
+        if ok:
+            picked += 1
+            credits['models'].append({'id': k, 'file': f'models/{k}/{k}.gltf', 'license': 'CC0', 'url': 'https://polyhaven.com/a/' + k,
+                                      'categories': v.get('categories', []), 'tags': v.get('tags', [])})
+            print('  + model', k)
 
 
 # ------------------------------------------------------------------ ambientCG (CC0)
@@ -255,6 +359,10 @@ if __name__ == '__main__':
                                ('polyhaven' not in what or c['source'] != 'Poly Haven')]
     if 'ambientcg' in what:
         ambientcg()
+    if 'osm' in what:
+        osm()
+    if 'models' in what:
+        polyhaven_models()
     if 'polyhaven' in what:
         credits['hdri'] = []
         polyhaven()
