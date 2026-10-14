@@ -47,7 +47,7 @@ jobs:
           print('kept models', sorted(ids))
           EOF
           fi
-          find . -type f -size +20M -print -delete
+          find . -type f -size +45M -print -delete
           cd ../..
           python3 cairo_microbus/tools/fetch_assets.py --merge
           du -sh cairo_microbus/assets/* || true

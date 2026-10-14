@@ -458,7 +458,12 @@
           [1, -1].forEach((side) => {
             const o = side * (r.w / 2 + 1.2);
             const x = a.x + dx * t - dz * o, z = a.z + dz * t + dx * o;
-            if (!nearJunction(x, z, 4) && !onOtherRoad(x, z, r) && !W.inBuilding(x, z) && !W.treeSpots.some((p) => Math.abs(p.x - x) < 6 && Math.abs(p.z - z) < 6)) W.treeSpots.push(new THREE.Vector3(x, 0.16, z));
+            if (!nearJunction(x, z, 4) && !onOtherRoad(x, z, r) && !W.inBuilding(x, z) && !W.treeSpots.some((p) => Math.abs(p.x - x) < 6 && Math.abs(p.z - z) < 6)) {
+              const v = new THREE.Vector3(x, 0.16, z);
+              // palms on the Corniche and the big avenues, leafy trees elsewhere
+              v.palm = /trunk|primary/.test(r.type) || /كورنيش|النيل/.test(r.name);
+              W.treeSpots.push(v);
+            }
           });
         }
       }
@@ -467,7 +472,7 @@
       let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
       poly.forEach((p) => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); });
       const n = Math.min(40, Math.floor(((maxX - minX) * (maxZ - minZ)) / 120));
-      for (let k = 0; k < n; k++) { const x = G.rand(minX, maxX), z = G.rand(minZ, maxZ); if (pointInPoly(x, z, poly)) W.treeSpots.push(new THREE.Vector3(x, 0.03, z)); }
+      for (let k = 0; k < n; k++) { const x = G.rand(minX, maxX), z = G.rand(minZ, maxZ); if (pointInPoly(x, z, poly)) { const v = new THREE.Vector3(x, 0.03, z); v.palm = k % 3 === 0; W.treeSpots.push(v); } }
     });
 
     // street lamps along roads

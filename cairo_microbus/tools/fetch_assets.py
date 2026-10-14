@@ -314,9 +314,9 @@ def polyhaven_models():
                 f.write(b)
         import shutil
         glb = os.path.join(base, k + '.glb')
-        if ok and slim_model(os.path.join(out, k + '.gltf'), glb) and os.path.getsize(glb) > 6_000_000:
+        if ok and slim_model(os.path.join(out, k + '.gltf'), glb, '0.1') and os.path.getsize(glb) > 25_000_000:
             slim_model(os.path.join(out, k + '.gltf'), glb, '0.04')  # still heavy: simplify harder
-        if ok and os.path.exists(glb) and os.path.getsize(glb) < 8_000_000:
+        if ok and os.path.exists(glb) and os.path.getsize(glb) < 30_000_000:
             picked += 1
             credits['models'].append({'id': k, 'file': f'models/{k}.glb', 'license': 'CC0', 'url': 'https://polyhaven.com/a/' + k,
                                       'categories': v.get('categories', []), 'tags': v.get('tags', [])})

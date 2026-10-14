@@ -33,9 +33,86 @@
     })));
   };
 
-  // place trees at the given spots (Vector3, y = ground height)
+  // ---------- date palms: ringed trunk + drooping fronds made of thin leaflets (alpha) ----------
+  T.palmParts = function () {
+    if (T._palm) return T._palm;
+    // frond texture: a midrib with many narrow leaflets
+    const c = G.canvas(128, 512), x = c.getContext('2d');
+    x.clearRect(0, 0, 128, 512);
+    for (let y = 30; y < 500; y += 5) {
+      const len = 58 * Math.sin(Math.PI * (y / 512)) + 6;
+      x.strokeStyle = `hsl(${88 + Math.random() * 16},${38 + Math.random() * 15}%,${22 + Math.random() * 14}%)`;
+      x.lineWidth = 3;
+      x.beginPath(); x.moveTo(64, y); x.lineTo(64 - len, y + 22); x.stroke();
+      x.beginPath(); x.moveTo(64, y); x.lineTo(64 + len, y + 22); x.stroke();
+    }
+    x.strokeStyle = '#6b6b3a'; x.lineWidth = 4; x.beginPath(); x.moveTo(64, 0); x.lineTo(64, 512); x.stroke();
+    const frondMat = new THREE.MeshStandardMaterial({ map: G.tex(c), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.8 });
+    frondMat.userData.linear = true;
+    // bark texture with leaf-base rings
+    const b = G.canvas(64, 256), bx = b.getContext('2d');
+    bx.fillStyle = '#6e5a43'; bx.fillRect(0, 0, 64, 256);
+    for (let y = 0; y < 256; y += 9) { bx.fillStyle = 'rgba(40,28,16,0.55)'; bx.fillRect(0, y, 64, 3); bx.fillStyle = 'rgba(160,130,95,0.35)'; bx.fillRect(0, y + 3, 64, 2); }
+    G.noise(bx, 64, 256, 800, 0.15, true);
+    const barkMat = new THREE.MeshStandardMaterial({ map: G.tex(b, true), roughness: 1 });
+    barkMat.userData.linear = true;
+    // trunk, slightly curved
+    const H = 1, trunk = new THREE.CylinderGeometry(0.17, 0.24, H, 8, 8, true);
+    trunk.translate(0, H / 2, 0);
+    const tp = trunk.attributes.position;
+    for (let i = 0; i < tp.count; i++) { const y = tp.getY(i); tp.setX(i, tp.getX(i) + 0.25 * y * y); }
+    const tuv = trunk.attributes.uv;
+    for (let i = 0; i < tuv.count; i++) tuv.setY(i, tuv.getY(i) * 6);
+    trunk.computeVertexNormals();
+    // ~16 fronds radiating from the crown, bending down
+    const fronds = [];
+    for (let k = 0; k < 16; k++) {
+      const g = new THREE.PlaneGeometry(0.9, 3.4, 1, 8);
+      g.translate(0, 1.7, 0); // base at origin, length along +y
+      const up = k < 5 ? 0.9 : 0.35, droop = k < 5 ? 0.35 : 0.9;
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const t = p.getY(i) / 3.4;
+        // lay the frond out and let it droop
+        const out = p.getY(i) * Math.cos(up - droop * t), h = p.getY(i) * Math.sin(up - droop * t) * 0.6;
+        p.setXYZ(i, p.getX(i) * (1 - t * 0.4), h, out);
+      }
+      g.rotateY((k / 16) * Math.PI * 2 + (k % 2) * 0.2);
+      g.translate(0.25, 0, 0); // crown sits on the curved trunk top
+      g.computeVertexNormals();
+      fronds.push(g);
+    }
+    const frondGeo = G.merge(fronds.map((g) => { g.deleteAttribute('color'); return g; }));
+    T._palm = { trunk, frondGeo, frondMat, barkMat };
+    return T._palm;
+  };
+
+  T.plantPalms = function (scene, spots) {
+    if (!spots.length) return;
+    const P = T.palmParts();
+    const n = spots.length;
+    const trunkIM = new THREE.InstancedMesh(P.trunk, P.barkMat, n);
+    const crownIM = new THREE.InstancedMesh(P.frondGeo, P.frondMat, n);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    spots.forEach((p, i) => {
+      const h = G.rand(7, 11), rot = G.rand(0, 6.28), s = G.rand(0.9, 1.15);
+      q.setFromAxisAngle(up, rot);
+      m.compose(new THREE.Vector3(p.x, p.y || 0, p.z), q, new THREE.Vector3(s, h, s));
+      trunkIM.setMatrixAt(i, m);
+      // crown on top of the (curved) trunk
+      const top = new THREE.Vector3(0.25 * s, h, 0).applyQuaternion(q);
+      m.compose(new THREE.Vector3(p.x + top.x, (p.y || 0) + h, p.z + top.z), q, new THREE.Vector3(s, s, s));
+      crownIM.setMatrixAt(i, m);
+    });
+    [trunkIM, crownIM].forEach((im) => { im.castShadow = true; im.receiveShadow = true; scene.add(im); });
+  };
+
+  // place trees at the given spots (Vector3, y = ground height; .palm marks palm spots)
   T.plant = function (scene, spots) {
     if (!spots || !spots.length) return;
+    T.plantPalms(scene, spots.filter((p) => p.palm));
+    spots = spots.filter((p) => !p.palm);
+    if (!spots.length) return;
     if (!T.models.length) { T.procedural(scene, spots); return; }
     const groups = T.models.map(() => []);
     spots.forEach((p, i) => groups[i % T.models.length].push(p));
