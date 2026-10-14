@@ -8,7 +8,27 @@
   const FEMALE = /salma|hoda|zariyah|laila|layla|mariam|maryam|amina|fatima|hala|sana|rana|noura|imane|amal|reem|dalia|zeina|amany|female|woman/i;
   const MALE = /shakir|naayf|hamed|maged|tarik|omar|bassel|hamdan|fahed|saleh|moaz|rami|taim|male|man\b/i;
 
+  // Inside the Android app (Capacitor) the WebView has no speechSynthesis: use the native TTS plugin
+  const nativeTTS = () => {
+    const C = window.Capacitor;
+    return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.TextToSpeech;
+  };
+
   V.init = function () {
+    const tts = nativeTTS();
+    if (tts) {
+      V.native = tts;
+      V.supported = true;
+      V.voiceLabel = 'الصوت: نطق أندرويد العربي';
+      tts.getSupportedLanguages().then((r) => {
+        const langs = (r && r.languages) || [];
+        V.nativeLang = langs.find((l) => /^ar[-_]EG/i.test(l)) || langs.find((l) => /^ar/i.test(l)) || null;
+        V.hasArabic = !!V.nativeLang;
+        if (!V.hasArabic) V.voiceLabel = 'نزّل صوت عربي من إعدادات أندرويد (Text-to-speech) – هتظهر الترجمة بس دلوقتي';
+        if (G.HUD) G.HUD.voiceStatus();
+      }).catch(() => { V.nativeLang = 'ar-EG'; V.hasArabic = true; });
+      return;
+    }
     if (!V.supported) { V.voiceLabel = 'المتصفح ده مش بيدعم الصوت'; return; }
     const pick = () => {
       const vs = speechSynthesis.getVoices();
@@ -59,7 +79,8 @@
   V.fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : s);
 
   V.stopCurrent = function () {
-    if (V.supported) speechSynthesis.cancel();
+    if (V.native) V.native.stop().catch(() => {});
+    else if (V.supported) speechSynthesis.cancel();
   };
 
   V.pump = function () {
@@ -96,7 +117,12 @@
       const p = item.anchor.isObject3D ? item.anchor.getWorldPosition(new THREE.Vector3()) : item.anchor;
       vol = G.clamp(1.15 - G.dist2(p, G.Player.pos) / 70, 0, 1);
     }
-    if (V.enabled && V.supported && V.hasArabic && vol > 0.08) {
+    if (V.enabled && V.native && V.hasArabic && vol > 0.08) {
+      clearTimeout(fallback);
+      fallback = setTimeout(finish, est * 2.5 + 3000);
+      V.native.speak({ text: item.text, lang: V.nativeLang, rate: spk.rate, pitch: G.clamp(spk.pitch, 0.5, 1.8), volume: vol, category: 'playback' })
+        .then(finish, finish);
+    } else if (V.enabled && V.supported && !V.native && V.hasArabic && vol > 0.08) {
       const u = new SpeechSynthesisUtterance(item.text);
       const voice = V.byGender[spk.g] || V.voices[0];
       u.voice = voice;

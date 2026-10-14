@@ -115,7 +115,7 @@
     tap('resumeBtn', () => H.togglePause());
     tap('voiceBtn', () => {
       G.Voice.enabled = !G.Voice.enabled;
-      if (!G.Voice.enabled && G.Voice.supported) speechSynthesis.cancel();
+      if (!G.Voice.enabled && G.Voice.supported) G.Voice.stopCurrent();
       H.voiceStatus();
     });
   };
@@ -141,7 +141,8 @@
     G.Main.paused = !G.Main.paused;
     $('pause').classList.toggle('hidden', !G.Main.paused);
     if (G.Audio.ctx) G.Main.paused ? G.Audio.ctx.suspend() : G.Audio.ctx.resume();
-    if (G.Voice.supported) G.Main.paused ? speechSynthesis.pause() : speechSynthesis.resume();
+    if (G.Voice.supported && !G.Voice.native) G.Main.paused ? speechSynthesis.pause() : speechSynthesis.resume();
+    if (G.Main.paused) G.Voice.stopCurrent();
   };
 
   H.voiceStatus = function () {
