@@ -189,14 +189,19 @@ def osm():
   node["highway"="traffic_signals"]({s_},{w_},{n_},{e_});
 );
 out body geom;"""
-    for url in ('https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'):
+    hdr = {'User-Agent': 'CairoMicrobusGame/1.0 (https://github.com/mostafasaadamin/finish_project)', 'Accept': '*/*'}
+    j = None
+    for url in ('https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter',
+                'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'):
         try:
-            data = urllib.request.urlopen(urllib.request.Request(url, data=urllib.parse.urlencode({'data': q}).encode(), headers=UA), timeout=180).read()
+            data = urllib.request.urlopen(urllib.request.Request(url, data=urllib.parse.urlencode({'data': q}).encode(), headers=hdr), timeout=150).read()
             j = json.loads(data)
+            print('  overpass ok', url, len(j.get('elements', [])), flush=True)
             break
         except Exception as e:  # noqa
-            print('  overpass failed', url, e)
-            j = None
+            print('  overpass failed', url, e, flush=True)
+    if not j:
+        j = osm_api_map(hdr)
     if not j:
         return
     os.makedirs(os.path.join(ROOT, 'osm'), exist_ok=True)
@@ -219,9 +224,54 @@ out body geom;"""
     print('  + osm elements', len(out))
 
 
+def osm_api_map(hdr):
+    """fallback: the official OSM API map call (XML), converted to Overpass-like elements with geometry"""
+    import xml.etree.ElementTree as ET
+    s_, w_, n_, e_ = OSM_BBOX
+    url = f'https://api.openstreetmap.org/api/0.6/map?bbox={w_},{s_},{e_},{n_}'
+    try:
+        xml = urllib.request.urlopen(urllib.request.Request(url, headers=hdr), timeout=150).read()
+    except Exception as e:  # noqa
+        print('  osm api failed', e, flush=True)
+        return None
+    root = ET.fromstring(xml)
+    nodes, ways, out = {}, {}, []
+    tags = lambda el: {t.get('k'): t.get('v') for t in el.findall('tag')}
+    for n in root.findall('node'):
+        nodes[n.get('id')] = (float(n.get('lat')), float(n.get('lon')))
+        tg = tags(n)
+        if tg:
+            out.append({'type': 'node', 'lat': nodes[n.get('id')][0], 'lon': nodes[n.get('id')][1], 'tags': tg})
+    for w in root.findall('way'):
+        geom = [nodes[nd.get('ref')] for nd in w.findall('nd') if nd.get('ref') in nodes]
+        ways[w.get('id')] = geom
+        tg = tags(w)
+        if tg and len(geom) > 1:
+            out.append({'type': 'way', 'tags': tg, 'geometry': [{'lat': a, 'lon': b} for a, b in geom]})
+    for r in root.findall('relation'):
+        tg = tags(r)
+        if not (tg.get('building') or tg.get('natural') == 'water' or tg.get('waterway') == 'riverbank'):
+            continue
+        members = [{'role': m.get('role'), 'geometry': [{'lat': a, 'lon': b} for a, b in ways.get(m.get('ref'), [])]}
+                   for m in r.findall('member') if m.get('type') == 'way']
+        out.append({'type': 'relation', 'tags': tg, 'members': members})
+    print('  osm api ok', len(out), flush=True)
+    return {'elements': out}
+
+
 # ------------------------------------------------------------------ Poly Haven 3D models (CC0): trees, palms, street props
-PH_MODEL_KEYS = ['tree', 'palm', 'bush', 'plant', 'street', 'lamp', 'bench', 'bin', 'trash', 'barrier', 'cone', 'crate', 'chair', 'table']
-PH_MAX_MODELS = 16
+PH_MODEL_KEYS = ['tree', 'palm']
+PH_MAX_MODELS = 4
+
+
+def slim_model(src_gltf, out_glb):
+    """simplify a heavy scanned model into one small .glb (fewer triangles, 512 px textures)"""
+    import subprocess
+    cmd = ['npx', '-y', '@gltf-transform/cli@4.1.1', 'optimize', src_gltf, out_glb,
+           '--compress', 'false', '--texture-compress', 'false', '--texture-size', '512', '--simplify-ratio', '0.12', '--simplify-error', '0.004']
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    print(r.stdout[-800:], r.stderr[-800:], flush=True)
+    return r.returncode == 0 and os.path.exists(out_glb)
 
 
 def polyhaven_models():
@@ -235,8 +285,7 @@ def polyhaven_models():
     credits['models'] = []
     base = os.path.join(ROOT, 'models')
     for k, v in sorted(assets.items(), key=lambda kv: -kv[1].get('download_count', 0)):
-        text = ' '.join([k] + v.get('categories', []) + v.get('tags', [])).lower()
-        if picked >= PH_MAX_MODELS or not any(w in text for w in PH_MODEL_KEYS):
+        if picked >= PH_MAX_MODELS or not any(w in k.lower() for w in PH_MODEL_KEYS):
             continue
         files = json.loads(get(f'https://api.polyhaven.com/files/{k}') or '{}')
         try:
@@ -260,11 +309,16 @@ def polyhaven_models():
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             with open(dst, 'wb') as f:
                 f.write(b)
-        if ok:
+        import shutil
+        glb = os.path.join(base, k + '.glb')
+        if ok and slim_model(os.path.join(out, k + '.gltf'), glb) and os.path.getsize(glb) < 8_000_000:
             picked += 1
-            credits['models'].append({'id': k, 'file': f'models/{k}/{k}.gltf', 'license': 'CC0', 'url': 'https://polyhaven.com/a/' + k,
+            credits['models'].append({'id': k, 'file': f'models/{k}.glb', 'license': 'CC0', 'url': 'https://polyhaven.com/a/' + k,
                                       'categories': v.get('categories', []), 'tags': v.get('tags', [])})
-            print('  + model', k)
+            print('  + model', k, os.path.getsize(glb), flush=True)
+        elif os.path.exists(glb):
+            os.remove(glb)
+        shutil.rmtree(out, ignore_errors=True)
 
 
 # ------------------------------------------------------------------ ambientCG (CC0)

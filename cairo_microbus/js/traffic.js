@@ -79,6 +79,11 @@
     car.pending = pick;
     car.mode = 'exit';
     car.turning = !!pick.turn;
+    if (pick.turn) {
+      const nh = G.City.headingFor(pick.axis, pick.dir);
+      const side = -Math.sin(nh) * Math.cos(car.heading) + Math.cos(nh) * Math.sin(car.heading);
+      car.signal = side > 0 ? 1 : -1;
+    } else car.signal = 0;
     T.setTarget(car, C.lanePos(pick.axis, R[pick.road], pick.dir, car.lane, pick.along, tmp));
   };
 
@@ -95,6 +100,7 @@
         else {
           Object.assign(car, { axis: car.pending.axis, road: car.pending.road, dir: car.pending.dir, nextIdx: car.pending.nextIdx });
           car.turning = false;
+          car.signal = 0;
           T.setEntry(car);
         }
       }
@@ -146,6 +152,9 @@
       const dP = P ? G.dist2(car.pos, P.pos) : 0;
       if (car.stuck > 20 && dP > 90) { car.stuck = 0; T.spawn(car); }
 
+      const on = car.signal && Math.floor(performance.now() / 400) % 2 === 0;
+      car.blink.L.forEach((m) => (m.visible = on && car.signal < 0));
+      car.blink.R.forEach((m) => (m.visible = on && car.signal > 0));
       car.mesh.visible = dP < 360;
       car.mesh.position.set(car.pos.x, 0, car.pos.z);
       car.mesh.rotation.y = car.heading;

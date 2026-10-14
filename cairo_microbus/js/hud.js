@@ -179,7 +179,7 @@
   H.toggleRadio = function () {
     const on = G.Audio.toggleRadio();
     $('radioBtn').classList.toggle('on', on);
-    H.toast(on ? '📻 الكاسيت شغّال: مهرجان!' : '📻 الكاسيت اتقفل');
+    H.toast(on ? (G.Audio.hasSample('mezmar') ? '📻 الكاسيت شغّال: مزمار بلدي' : '📻 الكاسيت شغّال') : '📻 الكاسيت اتقفل');
   };
   H.cycleCamera = function () {
     G.Main.camMode = (G.Main.camMode + 1) % 3;

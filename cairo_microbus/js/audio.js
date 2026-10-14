@@ -77,7 +77,15 @@
     ['traffic', /traffic|street|road|city|cairo|square|downtown|urban|cars/i],
   ];
   A.samples = {};
+  // hand-picked roles for the Cairo field recordings (Freesound ids)
+  const ROLE_BY_ID = {
+    256179: 'traffic', 851965: 'traffic', 23243: 'traffic', 683123: 'traffic', 672931: 'traffic', 698398: 'traffic',
+    683118: 'market', 667379: 'market', 23244: 'market', 421027: 'market',
+    683122: 'microbus', 667380: 'microbus',
+    683120: 'muezzin', 388276: 'musicHorn', 212444: 'horn', 683129: 'mezmar',
+  };
   A.sampleRole = (s) => {
+    if (ROLE_BY_ID[s.id]) return ROLE_BY_ID[s.id];
     const text = [s.title, s.description, (s.tags || []).join(' ')].join(' ');
     for (const [role, re] of ROLES) if (re.test(text)) return role;
     return null;
@@ -87,15 +95,17 @@
     const list = G.Assets ? G.Assets.sounds() : [];
     if (!list.length) return;
     // a few per role is plenty (memory on phones)
-    const per = { traffic: 4, market: 4, horn: 6, musicHorn: 1, muezzin: 1, microbus: 2, cafe: 2 };
+    const per = { traffic: 4, market: 4, horn: 6, musicHorn: 1, muezzin: 1, microbus: 2, cafe: 2, mezmar: 1 };
     const picked = {};
     list.forEach((s) => {
-      const role = s.role || A.sampleRole(s); // foley files carry their role from the download
+      const role = ROLE_BY_ID[s.id] || s.role || A.sampleRole(s); // foley files carry their role from the download
       if (s.role) per[role] = 4;
       if (!role) return;
       (picked[role] = picked[role] || []);
       if (picked[role].length < per[role]) picked[role].push(s);
     });
+    // long field recordings are streamed (never fully decoded: phones would run out of memory)
+    STREAMED.forEach((role) => { if (picked[role]) { A.streams[role] = picked[role].map((s) => 'assets/sounds/' + s.file); delete picked[role]; } });
     const jobs = [];
     Object.entries(picked).forEach(([role, arr]) => arr.forEach((s) => jobs.push(
       fetch('assets/sounds/' + s.file).then((r) => r.arrayBuffer())
@@ -107,13 +117,35 @@
     A.startBeds();
   };
 
-  A.hasSample = (role) => !!(A.samples[role] && A.samples[role].length);
+  const STREAMED = ['traffic', 'market', 'microbus', 'cafe', 'mezmar', 'muezzin'];
+  A.streams = {};
+  A.hasSample = (role) => !!((A.samples[role] && A.samples[role].length) || (A.streams[role] && A.streams[role].length));
+
+  // a streamed recording routed through Web Audio (gain / pan)
+  A.streamNode = function (url, loop) {
+    const el = new Audio();
+    el.src = url; el.loop = !!loop; el.preload = 'auto';
+    el.crossOrigin = 'anonymous';
+    const src = A.ctx.createMediaElementSource(el);
+    const g = A.ctx.createGain();
+    src.connect(g);
+    return { el, src, g };
+  };
 
   // looping ambience beds: city traffic always, market crowd and microbus interior faded in by the game
   A.beds = {};
   A.startBeds = function () {
     const bed = (role, vol) => {
       if (!A.hasSample(role)) return;
+      if (A.streams[role]) {
+        const n = A.streamNode(G.pick(A.streams[role]), true);
+        n.g.gain.value = vol;
+        n.g.connect(A.master);
+        n.el.addEventListener('loadedmetadata', () => { try { n.el.currentTime = Math.random() * Math.max(0, n.el.duration - 5); } catch (e) { /* not seekable yet */ } }, { once: true });
+        n.el.play().catch(() => {});
+        A.beds[role] = { el: n.el, g: n.g, base: vol };
+        return;
+      }
       const src = A.ctx.createBufferSource();
       src.buffer = G.pick(A.samples[role]).buf;
       src.loop = true;
@@ -149,6 +181,12 @@
     if (!A.ready || !A.hasSample(role)) return false;
     const dest = A.spatial(pos, 140, vol == null ? 0.6 : vol);
     if (!dest) return true;
+    if (A.streams[role]) {
+      const n = A.streamNode(G.pick(A.streams[role]), false);
+      n.g.connect(dest);
+      n.el.play().catch(() => {});
+      return true;
+    }
     const { buf } = G.pick(A.samples[role]);
     const src = A.ctx.createBufferSource();
     src.buffer = buf;
@@ -395,6 +433,21 @@
   A.toggleRadio = function () {
     if (!A.ready) return false;
     A.radioOn = !A.radioOn;
+    if (A.hasSample('mezmar')) {
+      // a real street mizmar recording through a small car speaker
+      if (A.radioOn) {
+        const n = A.streamNode(A.streams.mezmar[0], true);
+        const bp = A.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1600; bp.Q.value = 0.4;
+        n.g.gain.value = 0.7;
+        n.g.connect(bp); bp.connect(A.master);
+        n.el.play().catch(() => {});
+        A.radioSrc = n;
+      } else if (A.radioSrc) {
+        A.radioSrc.el.pause();
+        A.radioSrc = null;
+      }
+      return A.radioOn;
+    }
     if (A.radioOn) {
       A.radioBus = A.ctx.createGain();
       A.radioBus.gain.value = 0.2;

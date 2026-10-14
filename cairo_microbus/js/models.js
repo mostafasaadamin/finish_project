@@ -413,7 +413,17 @@
     const body = new THREE.Mesh(G.merge(parts), Mat.car);
     body.castShadow = true;
     group.add(body);
-    return { mesh: group, body, len, wid, maxSpeed, type };
+    // turn signals at the four corners (left is +x when facing +z)
+    if (!Mat.blink) Mat.blink = new THREE.MeshBasicMaterial({ color: 0xffa000 });
+    const blink = { L: [], R: [] };
+    [[1, 'L'], [-1, 'R']].forEach(([sx, side]) => [1, -1].forEach((sz) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.05), Mat.blink);
+      m.position.set(sx * (wid / 2 - 0.12), type === 'bus' ? 1.0 : 0.72, sz * (len / 2 + 0.02));
+      m.visible = false;
+      group.add(m);
+      blink[side].push(m);
+    }));
+    return { mesh: group, body, len, wid, maxSpeed, type, blink };
   };
 
   // ================= PEOPLE =================

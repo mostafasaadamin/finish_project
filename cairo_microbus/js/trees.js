@@ -6,7 +6,7 @@
 
   // load tree / palm / bush models listed in credits.json
   T.load = async function () {
-    const list = ((G.Assets.credits && G.Assets.credits.models) || []).filter((m) => /tree|palm|bush|plant/i.test([m.id].concat(m.tags || [], m.categories || []).join(' ')));
+    const list = ((G.Assets.credits && G.Assets.credits.models) || []).filter((m) => /tree|palm/i.test(m.id));
     if (!list.length || !THREE.GLTFLoader) return;
     const loader = new THREE.GLTFLoader();
     await Promise.all(list.slice(0, 5).map((m) => new Promise((res) => {

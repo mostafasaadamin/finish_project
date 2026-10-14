@@ -137,14 +137,29 @@
       if (car.speed > desired) car.speed = Math.max(desired, car.speed - 10 * dt);
       else car.speed = Math.min(desired, car.speed + 3 * dt);
 
+      // decide the next turn early and signal it
+      if (!car.nextOpt && car.edge.len - car.s < 30) {
+        car.nextOpt = OT.next(car);
+        if (car.nextOpt) {
+          OT.at(car.nextOpt.e, car.nextOpt.dir, Math.min(8, car.nextOpt.e.len), at);
+          const side = -at.tx * car.tz + at.tz * car.tx; // > 0: the new road goes to the right
+          car.signal = side > 0.35 ? 1 : side < -0.35 ? -1 : 0;
+        }
+      }
       car.s += car.speed * dt;
       while (car.s >= car.edge.len) {
-        const nx = OT.next(car);
+        const nx = car.nextOpt || OT.next(car);
+        car.nextOpt = null;
+        car.signalOffAt = 10;
         if (!nx) { car.s = car.edge.len; car.speed = 0; break; }
         const rest = car.s - car.edge.len;
         car.edge = nx.e; car.dir = nx.dir; car.s = rest;
         car.off = OT.laneOffset(car, nx.e);
       }
+      if (car.signalOffAt && car.s > car.signalOffAt && !car.nextOpt) { car.signal = 0; car.signalOffAt = 0; }
+      const on = car.signal && Math.floor(performance.now() / 400) % 2 === 0;
+      car.blink.L.forEach((m) => (m.visible = on && car.signal < 0));
+      car.blink.R.forEach((m) => (m.visible = on && car.signal > 0));
       OT.exact(car);
       // smooth the corners: the drawn car eases toward the exact lane position
       const k = 1 - Math.exp(-dt * 6);

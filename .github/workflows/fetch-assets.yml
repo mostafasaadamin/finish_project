@@ -72,8 +72,12 @@ jobs:
           du -sh cairo_microbus/assets/* || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cairo_microbus/assets
-          git diff --cached --quiet && echo "nothing new" && exit 0
-          git commit -m "Add downloaded game assets [skip ci]"
-          for i in 1 2 3 4; do git pull --rebase -q && git push && exit 0; sleep 10; done
-          exit 1
+          git config http.postBuffer 524288000
+          push() { for i in 1 2 3 4; do git pull --rebase -q && git push && return 0; sleep 15; done; return 1; }
+          for part in osm credits.json sounds polyhaven_models_index.json models textures hdri; do
+            [ -e "cairo_microbus/assets/$part" ] || continue
+            git add "cairo_microbus/assets/$part"
+            git diff --cached --quiet && continue
+            git commit -qm "Add downloaded game assets: $part [skip ci]"
+            push
+          done
