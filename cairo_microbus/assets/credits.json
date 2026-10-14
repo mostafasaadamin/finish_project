@@ -2265,36 +2265,6 @@
  ],
  "models": [
   {
-   "id": "jacaranda_tree",
-   "file": "models/jacaranda_tree.glb",
-   "license": "CC0",
-   "url": "https://polyhaven.com/a/jacaranda_tree",
-   "categories": [
-    "nature",
-    "plants",
-    "trees",
-    "collection: verdant_trail"
-   ],
-   "tags": [
-    "tree",
-    "natural",
-    "nature",
-    "green",
-    "plant",
-    "outdoor",
-    "leaf",
-    "botany",
-    "leaves",
-    "forest",
-    "jungle",
-    "foliage",
-    "geometry nodes",
-    "bark",
-    "trunk",
-    "jacaranda"
-   ]
-  },
-  {
    "id": "tree_small_02",
    "file": "models/tree_small_02.glb",
    "license": "CC0",

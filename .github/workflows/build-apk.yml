@@ -1,7 +1,7 @@
 name: Build Android APK
 
 # Wraps the web game (cairo_microbus/) in a Capacitor Android app and builds a debug APK.
-# The APK is uploaded as a workflow artifact and committed to cairo_microbus/apk/.
+# The APK is uploaded as a workflow artifact and published as the 'apk-latest' GitHub release.
 # Runs when cairo_microbus/tools/build_request.txt changes (or manually).
 on:
   push:
@@ -100,13 +100,22 @@ jobs:
           name: CairoMicrobus-apk
           path: build-apk/android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Publish APK on the apk-builds branch (single commit, no history growth)
+      - name: Publish APK as a GitHub release (no size limit) and, when small enough, on apk-builds
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/apkout && cp build-apk/android/app/build/outputs/apk/debug/app-debug.apk /tmp/apkout/CairoMicrobus.apk
-          cd /tmp/apkout
-          git init -q -b apk-builds
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          echo "Built from ${GITHUB_SHA}" > BUILD.txt
-          git add . && git commit -qm "CairoMicrobus.apk from ${GITHUB_SHA}"
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" apk-builds
+          ls -la /tmp/apkout
+          gh release delete apk-latest -y --cleanup-tag -R "$GITHUB_REPOSITORY" || true
+          gh release create apk-latest /tmp/apkout/CairoMicrobus.apk -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Cairo Microbus APK" --notes "Built from ${GITHUB_SHA}" --prerelease
+          size=$(stat -c %s /tmp/apkout/CairoMicrobus.apk)
+          if [ "$size" -lt 95000000 ]; then
+            cd /tmp/apkout
+            git init -q -b apk-builds
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            echo "Built from ${GITHUB_SHA}" > BUILD.txt
+            git add . && git commit -qm "CairoMicrobus.apk from ${GITHUB_SHA}"
+            git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" apk-builds
+          fi

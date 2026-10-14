@@ -117,7 +117,7 @@
     const groups = T.models.map(() => []);
     spots.forEach((p, i) => groups[i % T.models.length].push(p));
     const mobile = G.Main && G.Main.isMobile;
-    T.nearMax = mobile ? 8 : 24;
+    T.nearMax = mobile ? 5 : 14;
     T.lod = [];
     T.models.forEach((m, k) => {
       const ps = groups[k];
@@ -189,25 +189,30 @@
     R.toneMapping = old.tm;
     scene.traverse((o) => o.material && o.material.dispose());
     const tex = rt.texture;
-    const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+    const mat = new THREE.MeshStandardMaterial({ map: tex, color: 0xd0d0d0, alphaTest: 0.45, roughness: 0.9, metalness: 0, envMapIntensity: 0.6 });
+    mat.shadowSide = THREE.DoubleSide;
     mat.userData.linear = true;
-    // crossed quads; front uses the left half of the texture, side the right half
-    const quads = [0, 1].map((i) => {
+    // crossed quads (each in both facings, single-sided); front uses the left half of the
+    // texture, side the right half. Normals point mostly up like a leafy crown, so every card
+    // is lit the same way whichever way it faces.
+    const quads = [];
+    [0, 1].forEach((i) => [0, Math.PI].forEach((flip) => {
       const g = new THREE.PlaneGeometry(w, h);
       g.translate(0, h / 2 + box.min.y, 0);
       const uv = g.attributes.uv;
       for (let j = 0; j < uv.count; j++) uv.setX(j, uv.getX(j) * 0.5 + i * 0.5);
+      if (flip) { // mirror the picture so the back side reads correctly
+        for (let j = 0; j < uv.count; j++) uv.setX(j, i * 0.5 + (0.5 - (uv.getX(j) - i * 0.5)));
+        g.rotateY(Math.PI);
+      }
       if (i) g.rotateY(Math.PI / 2);
-      // round normals so the flat cards shade like a crown
       const n = g.attributes.normal, p = g.attributes.position;
       for (let j = 0; j < n.count; j++) {
-        const v = new THREE.Vector3(p.getX(j), (p.getY(j) - h * 0.5) * 0.6, p.getZ(j)).normalize();
-        v.y += 0.6;
-        v.normalize();
+        const v = new THREE.Vector3(p.getX(j) * 0.35, 1, p.getZ(j) * 0.35).normalize();
         n.setXYZ(j, v.x, v.y, v.z);
       }
-      return g;
-    });
+      quads.push(g);
+    }));
     const geo = G.merge(quads.map((g) => { if (g.attributes.color) g.deleteAttribute('color'); return g; }));
     return { geo, mat };
   };
