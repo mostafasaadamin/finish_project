@@ -26,9 +26,9 @@ jobs:
           SKETCHFAB_TOKEN: ${{ secrets.SKETCHFAB_TOKEN }}
         run: |
           set -e
-          read -r UID NAME < cairo_microbus/tools/sketchfab_request.txt
+          read -r MID NAME < cairo_microbus/tools/sketchfab_request.txt
           mkdir -p cairo_microbus/assets/vehicles /tmp/sf
-          curl -s "https://api.sketchfab.com/v3/models/$UID" > /tmp/sf/meta.json
+          curl -s "https://api.sketchfab.com/v3/models/$MID" > /tmp/sf/meta.json
           python3 - <<'PY'
           import json
           d = json.load(open('/tmp/sf/meta.json'))
@@ -42,7 +42,7 @@ jobs:
                      'license': lic.get('label'), 'downloadable': d.get('isDownloadable')}, open('/tmp/sf/info.json', 'w'), ensure_ascii=False)
           PY
           if [ -z "$SKETCHFAB_TOKEN" ]; then echo "NO_TOKEN: add the SKETCHFAB_TOKEN secret to download"; exit 0; fi
-          curl -s -H "Authorization: Token $SKETCHFAB_TOKEN" "https://api.sketchfab.com/v3/models/$UID/download" > /tmp/sf/dl.json
+          curl -s -H "Authorization: Token $SKETCHFAB_TOKEN" "https://api.sketchfab.com/v3/models/$MID/download" > /tmp/sf/dl.json
           URL=$(python3 -c "import json;d=json.load(open('/tmp/sf/dl.json'));print((d.get('gltf') or {}).get('url',''))")
           if [ -z "$URL" ]; then cat /tmp/sf/dl.json; exit 1; fi
           curl -sL "$URL" -o /tmp/sf/model.zip
