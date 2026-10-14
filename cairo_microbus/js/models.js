@@ -408,6 +408,7 @@
       // the player's microbus keeps separate parts; traffic bodies are baked into a few meshes
       const vb = opts && opts.player ? Object.assign(G.Vehicles.microbus(), { blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] }) : G.Vehicles.make(type);
       if (opts && opts.player) G.Vehicles.bake(vb.root); // body merged, wheels stay separate to spin
+      if (vb.real) { vb.blinkF = [0.8, 0.72, 2.41]; vb.blinkR = [0.83, 0.82, -2.42]; }
       const group = new THREE.Group();
       group.add(vb.root);
       if (!Mat.blink) Mat.blink = new THREE.MeshBasicMaterial({ color: 0xffa000 });
@@ -420,7 +421,7 @@
         blink[side].push(m);
       }));
       const len = vb.len || 4.8, wid = vb.wid || 1.9;
-      return { mesh: group, body: vb.root, len, wid, maxSpeed: SPEED[type] || 16, type, blink, wheels: vb.wheels };
+      return { mesh: group, body: vb.root, len, wid, maxSpeed: SPEED[type] || 16, type, blink, wheels: vb.wheels, real: vb.real };
     }
     let parts, len, wid, maxSpeed;
     switch (type) {

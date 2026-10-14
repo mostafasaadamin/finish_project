@@ -188,7 +188,7 @@
     await G.Assets.load((d, n) => (status.textContent = `بنحمّل الصور الحقيقية… ${d}/${n}`));
     await loadSky();
     status.textContent = 'بنحمّل خريطة وسط البلد والشجر…';
-    await Promise.all([G.OSM.load(), G.Trees.load(), G.Chars.load()]);
+    await Promise.all([G.OSM.load(), G.Trees.load(), G.Chars.load(), G.Vehicles.load()]);
     status.textContent = 'بنبني شوارع القاهرة…';
     await new Promise((r) => setTimeout(r, 30));
     G.Models.buildTextures();

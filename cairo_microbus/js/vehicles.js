@@ -194,7 +194,61 @@
   };
 
   // ======================= TOYOTA HIACE MICROBUS =======================
+  // ---- real HiAce model (2005 Toyota HiAce by ActsOfDoge, Sketchfab Free Standard licence)
+  V.load = function () {
+    if (!THREE.GLTFLoader) return Promise.resolve();
+    return new Promise((res) => new THREE.GLTFLoader().load('assets/vehicles/hiace.glb', (g) => {
+      const M = mats();
+      g.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = true;
+        o.receiveShadow = true;
+        const n = o.material.name;
+        if (/^glass/.test(n)) o.material = M.glass;
+        else {
+          const old = o.material;
+          const m = /paint/.test(n)
+            ? new PhysMat({ map: old.map, color: 0xffffff, roughness: 0.28, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.08 })
+            : /chrome/.test(n) ? new THREE.MeshStandardMaterial({ map: old.map, color: 0xffffff, roughness: 0.15, metalness: 0.9 })
+              : new THREE.MeshStandardMaterial({ map: old.map, color: 0xffffff, roughness: /lights/.test(n) ? 0.2 : 0.65, metalness: 0, transparent: old.transparent, alphaTest: old.transparent ? 0.3 : 0 });
+          if (n === 'lp') m.map = V.plateTex(true); // Egyptian plates
+          if (m.map) { m.map.encoding = THREE.sRGBEncoding; m.map.anisotropy = 4; }
+          m.name = n;
+          m.userData.linear = true;
+          o.material = m;
+        }
+      });
+      V.hiace = g.scene;
+      res();
+    }, undefined, () => res()));
+  };
+
+  // clone of the real model with spinning/steering wheel groups (same API as the built van)
+  V.hiaceClone = function () {
+    const root = V.hiace.clone(true);
+    const wheels = [];
+    root.children.slice().forEach((o) => {
+      if (!/^wheel_/.test(o.name)) return;
+      const grp = new THREE.Group(), spin = new THREE.Group();
+      grp.position.copy(o.position);
+      o.position.set(0, 0, 0);
+      root.remove(o);
+      spin.add(o);
+      grp.add(spin);
+      grp.userData.spin = spin;
+      grp.userData.front = grp.position.z > 0;
+      root.add(grp);
+      wheels.push(grp);
+    });
+    // a few seats visible through the windows
+    const lining = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.75, 3.9), mats().cabin);
+    lining.position.set(0, 1.45, -0.3);
+    root.add(lining);
+    return { root, wheels, len: 4.8, wid: 1.9, real: true };
+  };
+
   V.microbus = function (opts) {
+    if (V.hiace) return V.hiaceClone();
     opts = opts || {};
     const M = mats();
     const W = 1.9, R = 0.34;
@@ -552,7 +606,7 @@
       case 'microbus': {
         const mb = V.microbus({ dirt: G.pick([0.5, 1]) });
         V.bake(mb.root, null, true);
-        return { root: mb.root, wheels: [], len: 4.8, wid: 1.9, blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] };
+        return { root: mb.root, wheels: [], len: 4.8, wid: 1.9, real: mb.real, blinkF: mb.real ? [0.8, 0.72, 2.41] : [0.82, 0.74, 2.53], blinkR: mb.real ? [0.83, 0.82, -2.42] : [0.83, 0.71, -2.53] };
       }
       default: sp = SPEC.sedan(G.pick(['#e9e9e6', '#1d1f22', '#8a8f95', '#b7babd', '#7a1c1c', '#1f3f6e', '#c9c1a8', '#3c4a3a']));
     }

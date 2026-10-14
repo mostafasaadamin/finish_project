@@ -20,12 +20,12 @@
     rear.position.set(0, 0.52, -2.585); rear.rotation.y = Math.PI;
     const front = new THREE.Mesh(plateGeo, plateMat);
     front.position.set(0, 0.52, 2.59);
-    Pl.body.add(rear, front);
+    if (!v.real) Pl.body.add(rear, front); // the real model has its own plates
     // brake lights glow over the tail lamps; blinkers come with the model
     const bm = (Pl.brakeMat = new THREE.MeshBasicMaterial({ color: '#550000', transparent: true, opacity: 0.0 }));
     [0.83, -0.83].forEach((x) => {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.4), bm);
-      m.position.set(x, 0.98, -2.535); m.rotation.y = Math.PI;
+      m.position.set(x, v.real ? 1.05 : 0.98, v.real ? -2.425 : -2.535); m.rotation.y = Math.PI;
       Pl.body.add(m);
     });
     Pl.blinkers = v.blink;
