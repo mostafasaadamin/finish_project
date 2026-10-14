@@ -36,7 +36,7 @@ jobs:
             python3 - <<'EOF'
           import json, os, shutil
           c = json.load(open('credits.models.json'))
-          keep = [m for m in c.get('models', []) if any(w in ' '.join([m['id']] + m.get('tags', []) + m.get('categories', [])).lower() for w in ('tree', 'palm', 'plant', 'bush'))][:5]
+          keep = c.get("models", [])[:5]
           ids = {m['id'] for m in keep}
           for d in os.listdir('models') if os.path.isdir('models') else []:
               if d not in ids:
@@ -53,7 +53,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config http.postBuffer 524288000
-          push() { for i in 1 2 3 4; do git pull --rebase -q && git push && return 0; sleep 15; done; return 1; }
+          push() { for i in 1 2 3 4; do git pull --rebase --autostash -q && git push && return 0; sleep 15; done; return 1; }
           for part in osm credits.json sounds polyhaven_models_index.json models; do
             [ -e "cairo_microbus/assets/$part" ] || continue
             git add "cairo_microbus/assets/$part"
