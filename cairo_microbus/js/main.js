@@ -167,6 +167,7 @@
     G.Tex.water.offset.x = Main.t * 0.01;
     G.Tex.water.offset.y = Main.t * 0.004;
     G.Trees.update(Main.camera.position, dt);
+    G.Chars.update(dt);
     G.HUD.update();
     Main.renderer.render(Main.scene, Main.camera);
     if (!G.Foot.active) G.Gearbox.renderLever(dt, Main.t);
@@ -187,7 +188,7 @@
     await G.Assets.load((d, n) => (status.textContent = `بنحمّل الصور الحقيقية… ${d}/${n}`));
     await loadSky();
     status.textContent = 'بنحمّل خريطة وسط البلد والشجر…';
-    await Promise.all([G.OSM.load(), G.Trees.load()]);
+    await Promise.all([G.OSM.load(), G.Trees.load(), G.Chars.load()]);
     status.textContent = 'بنبني شوارع القاهرة…';
     await new Promise((r) => setTimeout(r, 30));
     G.Models.buildTextures();

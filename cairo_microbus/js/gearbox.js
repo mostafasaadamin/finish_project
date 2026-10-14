@@ -16,8 +16,20 @@
   const SLOT = { 1: [-1, 1], 2: [-1, -1], 3: [0, 1], 4: [0, -1], 5: [1, 1], '-1': [1, -1] };
   const slotGear = (col, row) => Object.keys(SLOT).map(Number).find((g) => SLOT[g][0] === col && SLOT[g][1] === row);
 
-  GB.label = () => (GB.gear === 0 ? 'N' : GB.gear === -1 ? 'R' : String(GB.gear));
-  try { GB.clutchManual = localStorage.getItem('cm_clutch') === '1'; } catch (e) { /* storage unavailable */ }
+  GB.label = () => (GB.gear === 0 ? 'N' : GB.gear === -1 ? 'R' : GB.auto ? 'D' : String(GB.gear));
+  // transmission: 'auto' (default), 'manual' (lever, automatic clutch) or 'clutch' (lever + clutch pedal)
+  GB.mode = 'auto';
+  try { GB.mode = localStorage.getItem('cm_trans') || 'auto'; } catch (e) { /* storage unavailable */ }
+  GB.setMode = function (m) {
+    GB.mode = m;
+    GB.auto = m === 'auto';
+    GB.clutchManual = m === 'clutch';
+    if (GB.auto) { GB.engineOn = true; if (GB.gear === 0) GB.gear = 1; }
+    try { localStorage.setItem('cm_trans', m); } catch (e) { /* storage unavailable */ }
+    const hud = document.getElementById('hud');
+    if (hud) hud.classList.toggle('auto', GB.auto);
+  };
+  GB.setMode(GB.mode);
 
   const sfx = (kind) => {
     const A = G.Audio;
@@ -77,6 +89,10 @@
     else if (wheelRpm < 1300) c = thr > 0.05 ? G.clamp(0.3 + (wheelRpm / 1300) * 0.7, 0, 1) : wheelRpm < 750 ? 0 : 1;
     else c = 1;
     GB.c = c;
+    if (GB.auto && GB.gear > 0 && GB.shiftT < -0.4) {
+      if (wheelRpm > 3300 + thr * 900 && GB.gear < 5) GB.shift(GB.gear + 1);
+      else if (wheelRpm < 1350 && GB.gear > 1) GB.shift(GB.gear - 1);
+    }
     const free = GB.engineOn ? GB.IDLE + thr * (GB.RED + 200 - GB.IDLE) : 0;
     const target = c * Math.max(wheelRpm, GB.engineOn ? GB.IDLE * 0.55 : 0) + (1 - c) * free;
     GB.rpm += (target - GB.rpm) * Math.min(1, dt * (c > 0.9 ? 18 : 5));

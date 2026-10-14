@@ -73,9 +73,11 @@
     <canvas id="gauges"></canvas>
 
     <button id="horn" class="round big" title="كلاكس (H)">📯</button>
-    <div id="pedals">
+    <div id="pedalsL">
+      <div id="brake" class="pedal brake" title="فرامل (↓ / Space) – دوس وإنت واقف عشان ترجع ورا"></div>
       <div id="clutch" class="pedal clutch" title="دبرياج / كلتش (Shift)"></div>
-      <div id="brake" class="pedal brake" title="فرامل (↓ / Space)"></div>
+    </div>
+    <div id="pedals">
       <div id="gas" class="pedal gas" title="بنزين (↑)"></div>
     </div>
     <div id="lever" title="الفتيس: اسحبه زي الحقيقي (1-5 / R / 0)"></div>
@@ -86,7 +88,7 @@
     <div class="card">
       <h2>⏸ استراحة يا اسطى</h2>
       <button id="voiceBtn" class="btn ghost">🔊 أصوات الكلام: شغّالة</button>
-      <button id="clutchBtn" class="btn ghost">⚙️ الكلتش: أوتوماتيك</button>
+      <button id="clutchBtn" class="btn ghost">⚙️ الفتيس: أوتوماتيك</button>
       <p id="voiceStatus" class="small"></p>
       <div class="help">
         <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> سواقة (↓ وإنت واقف = رجوع)</div>
@@ -130,6 +132,8 @@
   <script src="js/city.js"></script>
   <script src="js/models.js"></script>
   <script src="js/GLTFLoader.js"></script>
+  <script src="js/SkeletonUtils.js"></script>
+  <script src="js/chars.js"></script>
   <script src="js/osmcity.js"></script>
   <script src="js/world.js"></script>
   <script src="js/trees.js"></script>

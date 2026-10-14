@@ -63,8 +63,15 @@
       for (let k = 0; k < 5; k++) {
         const per = M().person(G.pick(['man', 'galabeya', 'man']));
         const o = (k - 2) * 1.6;
-        per.position.set(a.pos.x + a.along.x * o, a.pos.y - 0.42, a.pos.z + a.along.z * o);
+        const real = per.userData.real;
+        per.position.set(a.pos.x + a.along.x * o, a.pos.y - (real ? 0 : 0.42), a.pos.z + a.along.z * o);
         per.rotation.y = a.face + (k % 2 ? Math.PI : 0);
+        if (real) { // plastic ahwa chair under the seated customer
+          const ch = M().chair();
+          ch.position.copy(per.position).add(new THREE.Vector3(Math.sin(per.rotation.y) * -0.12, 0, Math.cos(per.rotation.y) * -0.12));
+          ch.rotation.y = per.rotation.y;
+          scene.add(ch);
+        }
         M().animPerson(per, 'sit', 0);
         scene.add(per);
         group.push(per);

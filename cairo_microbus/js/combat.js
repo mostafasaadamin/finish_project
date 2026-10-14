@@ -436,7 +436,7 @@
     }
     G.Main.scene.add(group);
     const workers = [0, 1].map((k) => {
-      const w = M().person('galabeya', { robe: k ? '#ff8f00' : '#5d4037' });
+      const w = M().person('worker', { robe: k ? '#ff8f00' : '#5d4037' });
       w.position.copy(base).addScaledVector(new THREE.Vector3(rp.dx, 0, rp.dz), k ? 2.5 : -1.5);
       w.rotation.y = Math.atan2(rp.nx, rp.nz);
       G.Main.scene.add(w);

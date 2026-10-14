@@ -1,0 +1,560 @@
+{
+ "source": "Microsoft Rocketbox Avatar Library (MIT License) https://github.com/microsoft/Microsoft-Rocketbox",
+ "avatars": [
+  {
+   "id": "Male_Adult_15",
+   "kind": "galabeya",
+   "female": false,
+   "h": 1.819,
+   "mats": {
+    "m204_body": {
+     "map": "m204_body_color.jpg",
+     "lo": "m204_body_color_lo.jpg",
+     "normal": "m204_body_normal.jpg"
+    },
+    "m204_head": {
+     "map": "m204_head_color.jpg",
+     "lo": "m204_head_color_lo.jpg",
+     "normal": "m204_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_21",
+   "kind": "galabeya",
+   "female": false,
+   "h": 1.817,
+   "mats": {
+    "m251_body": {
+     "map": "m251_body_color.jpg",
+     "lo": "m251_body_color_lo.jpg",
+     "normal": "m251_body_normal.jpg"
+    },
+    "m251_head": {
+     "map": "m251_head_color.jpg",
+     "lo": "m251_head_color_lo.jpg",
+     "normal": "m251_head_normal.jpg"
+    },
+    "m251_keffiyeh": {
+     "map": "m251_body_color.jpg",
+     "lo": null,
+     "normal": null
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_02",
+   "kind": "man",
+   "female": false,
+   "h": 1.823,
+   "mats": {
+    "m003_body": {
+     "map": "m003_body_color.jpg",
+     "lo": "m003_body_color_lo.jpg",
+     "normal": "m003_body_normal.jpg"
+    },
+    "m003_head": {
+     "map": "m003_head_color.jpg",
+     "lo": "m003_head_color_lo.jpg",
+     "normal": "m003_head_normal.jpg"
+    },
+    "m003_opacity": {
+     "map": "m003_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_03",
+   "kind": "man",
+   "female": false,
+   "h": 1.807,
+   "mats": {
+    "m004_body": {
+     "map": "m004_body_color.jpg",
+     "lo": "m004_body_color_lo.jpg",
+     "normal": "m004_body_normal.jpg"
+    },
+    "m004_head": {
+     "map": "m004_head_color.jpg",
+     "lo": "m004_head_color_lo.jpg",
+     "normal": "m004_head_normal.jpg"
+    },
+    "m004_opacity": {
+     "map": "m004_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_05",
+   "kind": "man",
+   "female": false,
+   "h": 1.812,
+   "mats": {
+    "m009_body": {
+     "map": "m009_body_color.jpg",
+     "lo": "m009_body_color_lo.jpg",
+     "normal": "m009_body_normal.jpg"
+    },
+    "m009_head": {
+     "map": "m009_head_color.jpg",
+     "lo": "m009_head_color_lo.jpg",
+     "normal": "m009_head_normal.jpg"
+    },
+    "m009_opacity": {
+     "map": "m009_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_07",
+   "kind": "man",
+   "female": false,
+   "h": 1.821,
+   "mats": {
+    "m013_body": {
+     "map": "m013_body_color.jpg",
+     "lo": "m013_body_color_lo.jpg",
+     "normal": "m013_body_normal.jpg"
+    },
+    "m013_head": {
+     "map": "m013_head_color.jpg",
+     "lo": "m013_head_color_lo.jpg",
+     "normal": "m013_head_normal.jpg"
+    },
+    "m013_opacity": {
+     "map": "m013_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_08",
+   "kind": "man",
+   "female": false,
+   "h": 1.826,
+   "mats": {
+    "m014_body": {
+     "map": "m014_body_color.jpg",
+     "lo": "m014_body_color_lo.jpg",
+     "normal": "m014_body_normal.jpg"
+    },
+    "m014_head": {
+     "map": "m014_head_color.jpg",
+     "lo": "m014_head_color_lo.jpg",
+     "normal": "m014_head_normal.jpg"
+    },
+    "m014_opacity": {
+     "map": "m014_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_10",
+   "kind": "man",
+   "female": false,
+   "h": 1.831,
+   "mats": {
+    "m024_body": {
+     "map": "m024_body_color.jpg",
+     "lo": "m024_body_color_lo.jpg",
+     "normal": "m024_body_normal.jpg"
+    },
+    "m024_head": {
+     "map": "m024_head_color.jpg",
+     "lo": "m024_head_color_lo.jpg",
+     "normal": "m024_head_normal.jpg"
+    },
+    "m024_opacity": {
+     "map": "m024_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_14",
+   "kind": "man",
+   "female": false,
+   "h": 1.796,
+   "mats": {
+    "m012_body": {
+     "map": "m012_body_color.jpg",
+     "lo": "m012_body_color_lo.jpg",
+     "normal": "m012_body_normal.jpg"
+    },
+    "m012_head": {
+     "map": "m012_head_color.jpg",
+     "lo": "m012_head_color_lo.jpg",
+     "normal": "m012_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_18",
+   "kind": "man",
+   "female": false,
+   "h": 1.813,
+   "mats": {
+    "m023_body": {
+     "map": "m023_body_color.jpg",
+     "lo": "m023_body_color_lo.jpg",
+     "normal": "m023_body_normal.jpg"
+    },
+    "m023_head": {
+     "map": "m023_head_color.jpg",
+     "lo": "m023_head_color_lo.jpg",
+     "normal": "m023_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Male_Adult_20",
+   "kind": "man",
+   "female": false,
+   "h": 1.805,
+   "mats": {
+    "m027_body": {
+     "map": "m027_body_color.jpg",
+     "lo": "m027_body_color_lo.jpg",
+     "normal": "m027_body_normal.jpg"
+    },
+    "m027_head": {
+     "map": "m027_head_color.jpg",
+     "lo": "m027_head_color_lo.jpg",
+     "normal": "m027_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Business_Male_04",
+   "kind": "man",
+   "female": false,
+   "h": 1.801,
+   "mats": {
+    "m015_body": {
+     "map": "m015_body_color.jpg",
+     "lo": "m015_body_color_lo.jpg",
+     "normal": "m015_body_normal.jpg"
+    },
+    "m015_head": {
+     "map": "m015_head_color.jpg",
+     "lo": "m015_head_color_lo.jpg",
+     "normal": "m015_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Delivery_Male_01",
+   "kind": "man",
+   "female": false,
+   "h": 1.816,
+   "mats": {
+    "m112_body": {
+     "map": "m112_body_color.jpg",
+     "lo": "m112_body_color_lo.jpg",
+     "normal": "m112_body_normal.jpg"
+    },
+    "m112_head": {
+     "map": "m112_head_color.jpg",
+     "lo": "m112_head_color_lo.jpg",
+     "normal": "m112_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_06",
+   "kind": "woman",
+   "female": true,
+   "h": 1.736,
+   "mats": {
+    "f202_body": {
+     "map": "f202_body_color.jpg",
+     "lo": "f202_body_color_lo.jpg",
+     "normal": "f202_body_normal.jpg"
+    },
+    "f202_head": {
+     "map": "f202_head_color.jpg",
+     "lo": "f202_head_color_lo.jpg",
+     "normal": "f202_head_normal.jpg"
+    },
+    "f202_opacity": {
+     "map": "f202_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_10",
+   "kind": "woman",
+   "female": true,
+   "h": 1.737,
+   "mats": {
+    "f201_body": {
+     "map": "f201_body_color.jpg",
+     "lo": "f201_body_color_lo.jpg",
+     "normal": "f201_body_normal.jpg"
+    },
+    "f201_head": {
+     "map": "f201_head_color.jpg",
+     "lo": "f201_head_color_lo.jpg",
+     "normal": "f201_head_normal.jpg"
+    },
+    "f201_opacity": {
+     "map": "f201_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_16",
+   "kind": "woman",
+   "female": true,
+   "h": 1.737,
+   "mats": {
+    "f204": {
+     "map": "f204_color.jpg",
+     "lo": "f204_color_lo.jpg",
+     "normal": "f204_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_09",
+   "kind": "woman",
+   "female": true,
+   "h": 1.735,
+   "mats": {
+    "f009_body": {
+     "map": "f009_body_color.jpg",
+     "lo": "f009_body_color_lo.jpg",
+     "normal": "f009_body_normal.jpg"
+    },
+    "f009_head": {
+     "map": "f009_head_color.jpg",
+     "lo": "f009_head_color_lo.jpg",
+     "normal": "f009_head_normal.jpg"
+    },
+    "f009_opacity": {
+     "map": "f009_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_04",
+   "kind": "woman",
+   "female": true,
+   "h": 1.766,
+   "mats": {
+    "f004_body": {
+     "map": "f004_body_color.jpg",
+     "lo": "f004_body_color_lo.jpg",
+     "normal": "f004_body_normal.jpg"
+    },
+    "f004_head": {
+     "map": "f004_head_color.jpg",
+     "lo": "f004_head_color_lo.jpg",
+     "normal": "f004_head_normal.jpg"
+    },
+    "f004_opacity": {
+     "map": "f004_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Female_Adult_11",
+   "kind": "woman",
+   "female": true,
+   "h": 1.736,
+   "mats": {
+    "f011_body": {
+     "map": "f011_body_color.jpg",
+     "lo": "f011_body_color_lo.jpg",
+     "normal": "f011_body_normal.jpg"
+    },
+    "f011_head": {
+     "map": "f011_head_color.jpg",
+     "lo": "f011_head_color_lo.jpg",
+     "normal": "f011_head_normal.jpg"
+    },
+    "f011_opacity": {
+     "map": "f011_opacity_color.png",
+     "alpha": true
+    }
+   }
+  },
+  {
+   "id": "Male_Child_01",
+   "kind": "kid",
+   "female": false,
+   "h": 1.433,
+   "mats": {
+    "cm001_body": {
+     "map": "cm001_body_color.jpg",
+     "lo": "cm001_body_color_lo.jpg",
+     "normal": "cm001_body_normal.jpg"
+    },
+    "cm001_head": {
+     "map": "cm001_head_color.jpg",
+     "lo": "cm001_head_color_lo.jpg",
+     "normal": "cm001_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Male_Child_02",
+   "kind": "kid",
+   "female": false,
+   "h": 1.426,
+   "mats": {
+    "cm012_body": {
+     "map": "cm012_body_color.jpg",
+     "lo": "cm012_body_color_lo.jpg",
+     "normal": "cm012_body_normal.jpg"
+    },
+    "cm012_head": {
+     "map": "cm012_head_color.jpg",
+     "lo": "cm012_head_color_lo.jpg",
+     "normal": "cm012_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Female_Child_02",
+   "kind": "kid",
+   "female": true,
+   "h": 1.438,
+   "mats": {
+    "cf011_body": {
+     "map": "cf011_body_color.jpg",
+     "lo": "cf011_body_color_lo.jpg",
+     "normal": "cf011_body_normal.jpg"
+    },
+    "cf011_head": {
+     "map": "cf011_head_color.jpg",
+     "lo": "cf011_head_color_lo.jpg",
+     "normal": "cf011_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Police_Male_03",
+   "kind": "officer",
+   "female": false,
+   "h": 1.856,
+   "mats": {
+    "m172_body": {
+     "map": "m172_body_color.jpg",
+     "lo": "m172_body_color_lo.jpg",
+     "normal": "m172_body_normal.jpg"
+    },
+    "m172_head": {
+     "map": "m172_head_color.jpg",
+     "lo": "m172_head_color_lo.jpg",
+     "normal": "m172_head_normal.jpg"
+    },
+    "m172_equpiment": {
+     "map": "m156_body_color.jpg",
+     "lo": null,
+     "normal": null
+    },
+    "m172_pistol": {
+     "map": "m156_body_color.jpg",
+     "lo": null,
+     "normal": null
+    }
+   }
+  },
+  {
+   "id": "Police_Male_05",
+   "kind": "officer",
+   "female": false,
+   "h": 1.855,
+   "mats": {
+    "m169_body": {
+     "map": "m169_body_color.jpg",
+     "lo": "m169_body_color_lo.jpg",
+     "normal": "m169_body_normal.jpg"
+    },
+    "m169_head": {
+     "map": "m169_head_color.jpg",
+     "lo": "m169_head_color_lo.jpg",
+     "normal": "m169_head_normal.jpg"
+    }
+   }
+  },
+  {
+   "id": "Construction_Male_04",
+   "kind": "worker",
+   "female": false,
+   "h": 1.847,
+   "mats": {
+    "m103_body": {
+     "map": "m103_body_color.jpg",
+     "lo": "m103_body_color_lo.jpg",
+     "normal": "m103_body_normal.jpg"
+    },
+    "m103_head": {
+     "map": "m103_head_color.jpg",
+     "lo": "m103_head_color_lo.jpg",
+     "normal": "m103_head_normal.jpg"
+    },
+    "m103_helmet": {
+     "map": "m103_body_color.jpg",
+     "lo": null,
+     "normal": null
+    },
+    "m103_tools": {
+     "map": "m103_body_color.jpg",
+     "lo": null,
+     "normal": null
+    }
+   }
+  },
+  {
+   "id": "Construction_Male_07",
+   "kind": "worker",
+   "female": false,
+   "h": 1.839,
+   "mats": {
+    "m107_body": {
+     "map": "m107_body_color.jpg",
+     "lo": "m107_body_color_lo.jpg",
+     "normal": "m107_body_normal.jpg"
+    },
+    "m107_head": {
+     "map": "m107_head_color.jpg",
+     "lo": "m107_head_color_lo.jpg",
+     "normal": "m107_head_normal.jpg"
+    },
+    "m107_helmet": {
+     "map": "m107_body_color.jpg",
+     "lo": null,
+     "normal": null
+    }
+   }
+  },
+  {
+   "id": "Wood_Male_01",
+   "kind": "worker",
+   "female": false,
+   "h": 1.814,
+   "mats": {
+    "m110_body": {
+     "map": "m110_body_color.jpg",
+     "lo": "m110_body_color_lo.jpg",
+     "normal": "m110_body_normal.jpg"
+    },
+    "m110_head": {
+     "map": "m110_head_color.jpg",
+     "lo": "m110_head_color_lo.jpg",
+     "normal": "m110_head_normal.jpg"
+    }
+   }
+  }
+ ]
+}

@@ -132,8 +132,8 @@
     hold($('clutch'), () => (I.clutch = true), () => (I.clutch = false));
     tap('keyBtn', () => G.Gearbox.start());
     tap('clutchBtn', () => {
-      G.Gearbox.clutchManual = !G.Gearbox.clutchManual;
-      try { localStorage.setItem('cm_clutch', G.Gearbox.clutchManual ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+      const order = ['auto', 'manual', 'clutch'];
+      G.Gearbox.setMode(order[(order.indexOf(G.Gearbox.mode) + 1) % 3]);
       H.voiceStatus();
     });
     tap('blinkL', () => H.setBlink(-1));
@@ -198,7 +198,7 @@
     const b = $('voiceBtn');
     if (b) b.textContent = G.Voice.enabled ? '🔊 أصوات الكلام: شغّالة' : '🔇 أصوات الكلام: مقفولة';
     const cb = $('clutchBtn');
-    if (cb) cb.textContent = G.Gearbox.clutchManual ? '⚙️ الكلتش: يدوي (بالدواسة – ممكن العربية تفصل)' : '⚙️ الكلتش: أوتوماتيك';
+    if (cb) cb.textContent = { auto: '⚙️ الفتيس: أوتوماتيك', manual: '⚙️ الفتيس: مانوال (كلتش أوتوماتيك)', clutch: '⚙️ الفتيس: مانوال بالكلتش (ممكن العربية تفصل)' }[G.Gearbox.mode];
   };
 
   H.toast = function (text) {

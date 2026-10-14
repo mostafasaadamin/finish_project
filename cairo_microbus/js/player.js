@@ -54,6 +54,18 @@
     // manual gearbox: gas, brake and clutch pedals; gears from the lever or keys
     let thr = Math.max(I.kbUp ? 1 : 0, I.gas || 0);
     let brk = Math.max(I.kbDown ? 1 : 0, I.brake || 0, I.handbrake ? 1 : 0);
+    if (GB.auto) {
+      // automatic: hold the brake while stopped to go into reverse; in reverse the pedals swap
+      if (!GB.engineOn) GB.engineOn = true;
+      if (GB.gear === -1) {
+        if (thr > 0 && Pl.speed > -0.6) { GB.shift(1); }
+        else { const t = thr; thr = brk; brk = t; }
+      } else {
+        Pl.revHold = brk > 0 && thr === 0 && Math.abs(Pl.speed) < 0.4 ? (Pl.revHold || 0) + dt : 0;
+        if (Pl.revHold > 0.6) { GB.shift(-1); Pl.revHold = 0; G.HUD.toast('ورا ⬇️ (دوس فرامل عشان ترجع، بنزين عشان تقدّم)'); }
+        if (GB.gear === 0 && thr > 0) GB.shift(1);
+      }
+    }
     if (!GB.engineOn) thr = 0;
     Pl.throttle = thr;
     const eng = GB.update(dt, thr);

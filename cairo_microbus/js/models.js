@@ -453,6 +453,7 @@
 
   // kind: man | galabeya | woman | kid | officer
   M.person = function (kind, opts) {
+    if (G.Chars && G.Chars.ready) return G.Chars.make(kind || G.pick(['man', 'man', 'galabeya', 'woman', 'woman', 'kid']), opts);
     if (!geo) initPersonGeo();
     opts = opts || {};
     kind = kind || G.pick(['man', 'man', 'galabeya', 'woman', 'woman', 'kid']);
@@ -501,6 +502,7 @@
   // walk / idle / fight / sit animation
   M.animPerson = function (p, mode, dt, speed) {
     const u = p.userData;
+    if (u.real) { G.Chars.anim(p, mode, dt, speed); return; }
     if (mode === 'walk') {
       u.phase += dt * (speed || 1.4) * 5;
       const s = Math.sin(u.phase) * 0.6;
@@ -528,6 +530,18 @@
       u.armR.rotation.z = 0;
       u.torso.rotation.z = 0;
     }
+  };
+
+  // white plastic coffee-shop chair (seat at 0.45 m)
+  M.chair = function () {
+    if (!M._chair) {
+      const parts = [G.box(0.44, 0.04, 0.42, 0, 0.45, 0, '#eeeeea'), G.box(0.44, 0.42, 0.04, 0, 0.68, -0.2, '#eeeeea')];
+      [[-0.19, -0.18], [0.19, -0.18], [-0.19, 0.18], [0.19, 0.18]].forEach(([x, z]) => parts.push(G.box(0.035, 0.45, 0.035, x, 0.225, z, '#e2e2dc')));
+      M._chair = G.merge(parts);
+    }
+    const m = new THREE.Mesh(M._chair, G.Mat.vc);
+    m.castShadow = true;
+    return m;
   };
 
   M.cart = function (v) {

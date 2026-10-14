@@ -250,3 +250,17 @@ a.btn { display: inline-block; text-decoration: none; }
   #horn { right: 300px; }
   #keyBtn { right: 140px; bottom: 136px; }
 }
+
+/* brake on the left next to the wheel, gas on the right */
+#pedalsL { position: absolute; left: calc(var(--gut) + 214px); bottom: var(--gut); display: flex; gap: 12px; align-items: flex-end; }
+#hud.foot #pedalsL { display: none; }
+#hud.auto #lever, #hud.auto #clutch, #hud.auto #keyBtn { display: none; }
+#hud.auto #pedals { right: calc(var(--gut) + 10px); }
+#hud.auto .pedal.gas { width: 92px; height: 170px; }
+#hud.auto .pedal.brake { width: 120px; height: 100px; }
+@media (max-width: 900px), (max-height: 520px) {
+  #pedalsL { left: calc(var(--gut) + 160px); gap: 6px; }
+  #hud.auto .pedal.gas { width: 70px; height: 130px; }
+  #hud.auto .pedal.brake { width: 92px; height: 76px; }
+  #hud.auto #horn { right: 110px; }
+}
