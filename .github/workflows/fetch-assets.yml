@@ -5,8 +5,7 @@ name: Fetch game assets
 on:
   push:
     paths:
-      - 'cairo_microbus/tools/fetch_assets.py'
-      - '.github/workflows/fetch-assets.yml'
+      - 'cairo_microbus/tools/fetch_request.txt'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +21,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Download assets
-        run: python3 cairo_microbus/tools/fetch_assets.py sounds ambientcg polyhaven
+        # which groups to (re)download: sounds, foley, ambientcg, polyhaven
+        run: python3 cairo_microbus/tools/fetch_assets.py $(cat cairo_microbus/tools/fetch_request.txt)
       - name: Commit assets
         run: |
           du -sh cairo_microbus/assets || true

@@ -39,6 +39,28 @@ SEARCHES = ['cairo', 'cairo street', 'cairo traffic', 'cairo market', 'egypt str
             'egypt traffic', 'egyptian', 'egypt horn', 'tuk tuk', 'arabic street vendor', 'arabic crowd',
             'arabic market', 'muezzin cairo', 'microbus', 'egypt cafe', 'shisha cafe']
 MAX_SOUNDS = 60
+
+# real foley for the interactive events; each sound keeps the query it came from as its role
+FOLEY = {
+    'punch': ['punch', 'face punch', 'body punch'],
+    'hit_body': ['body hit', 'body fall', 'body thud'],
+    'grunt': ['male grunt pain', 'man hurt grunt'],
+    'scream': ['man scream', 'woman scream short'],
+    'arabic_shout': ['arabic argument', 'arabic shouting', 'arabic men arguing', 'egypt argument', 'arabic angry'],
+    'crowd_shout': ['crowd shouting', 'angry crowd', 'crowd gasp'],
+    'car_hit_person': ['car hit person', 'car impact body'],
+    'car_crash': ['car crash', 'car collision metal'],
+    'chainsaw': ['chainsaw', 'saw cutting tree'],
+    'tree_fall': ['tree falling', 'branch crack fall'],
+    'van_door': ['sliding van door', 'minivan door slide'],
+    'car_door': ['car door open close'],
+    'footsteps': ['footsteps asphalt', 'running footsteps street'],
+    'whistle': ['police whistle'],
+    'siren': ['police siren', 'ambulance siren'],
+    'engine_van': ['van engine idle', 'diesel van engine', 'minibus engine'],
+    'skid': ['tire skid', 'car brake squeal'],
+}
+FOLEY_PER_ROLE = 4
 MAX_BYTES = 7_000_000
 
 
@@ -46,10 +68,10 @@ def sound_links(html):
     return sorted(set(re.findall(r'href="(/people/[^"/]+/sounds/\d+/)"', html)))
 
 
-def fetch_sound(path, seen):
+def fetch_sound(path, seen, role=None, limit=None):
     sid = re.search(r'/sounds/(\d+)/', path).group(1)
-    if sid in seen or len(seen) >= MAX_SOUNDS:
-        return
+    if sid in seen or len(seen) >= (limit or MAX_SOUNDS):
+        return False
     html = get(FS + path)
     if not html:
         return
@@ -77,7 +99,10 @@ def fetch_sound(path, seen):
         'license': lic.group(1) if lic else 'unknown', 'tags': sorted(set(tags))[:25],
         'duration': float(dur.group(1)) if dur else None, 'bytes': len(data),
     })
+    if role:
+        credits['sounds'][-1]['role'] = role
     print('  +', fname, credits['sounds'][-1]['title'], credits['sounds'][-1]['license'])
+    return True
 
 
 def freesound():
@@ -93,6 +118,23 @@ def freesound():
         html = get(FS + '/search/?q=' + urllib.parse.quote(q) + '&s=Downloads+(most+first)') or ''
         for l in sound_links(html)[:6]:
             fetch_sound(l, seen)
+
+
+def foley():
+    os.makedirs(SND, exist_ok=True)
+    seen = {c['id'] for c in credits['sounds']}
+    for role, queries in FOLEY.items():
+        got = 0
+        for q in queries:
+            # short sounds first: filter to < 20 s
+            html = get(FS + '/search/?q=' + urllib.parse.quote(q) + '&f=duration:[0+TO+20]&s=Downloads+(most+first)') or ''
+            for l in sound_links(html)[:5]:
+                if got >= FOLEY_PER_ROLE:
+                    break
+                if fetch_sound(l, seen, role, limit=10_000):
+                    got += 1
+            if got >= FOLEY_PER_ROLE:
+                break
 
 
 # ------------------------------------------------------------------ ambientCG (CC0)
@@ -202,8 +244,11 @@ if __name__ == '__main__':
         for k in credits:
             credits[k] = [c for c in old.get(k, [])]
     if 'sounds' in what:
-        credits['sounds'] = []
+        credits['sounds'] = [c for c in credits['sounds'] if c.get('role')]
         freesound()
+    if 'foley' in what:
+        credits['sounds'] = [c for c in credits['sounds'] if not c.get('role')]
+        foley()
     if 'ambientcg' in what or 'polyhaven' in what:
         credits['textures'] = [c for c in credits['textures'] if
                                ('ambientcg' not in what or c['source'] != 'ambientCG') and
