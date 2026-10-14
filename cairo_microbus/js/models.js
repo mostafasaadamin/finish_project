@@ -145,6 +145,9 @@
     Mat.billboards = std({ map: Tex.billboards, roughness: 0.6 });
     Mat.streetSigns = std({ map: Tex.streetSigns, roughness: 0.5 });
     Mat.plate = new THREE.MeshBasicMaterial({ map: Tex.plate });
+    // balcony railings: rusty painted iron
+    const metal = G.Assets && G.Assets.ok ? G.Assets.texture('metal', 'Color', 1) : null;
+    Mat.rail = std({ map: metal, color: metal ? 0x6b6560 : 0x2b2622, roughness: 0.55, metalness: 0.4, side: THREE.DoubleSide });
   };
 
   // 4 columns x 4 floors, each column 3m, each floor 3.2m => 12m x 12.8m per repeat

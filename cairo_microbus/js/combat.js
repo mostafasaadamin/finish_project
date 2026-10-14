@@ -148,11 +148,10 @@
   };
 
   // inside a building zone (block minus its sidewalk)?
-  Cb.inBuilding = (x, z) => G.City.colliders.some((b) => b.maxX - b.minX > 3 && b.maxZ - b.minZ > 3 &&
-    x > b.minX + G.City.SW && x < b.maxX - G.City.SW && z > b.minZ + G.City.SW && z < b.maxZ - G.City.SW);
+  Cb.inBuilding = (x, z) => G.World.inBuilding(x, z);
 
   // 0.2 on sidewalks / blocks, 0 on the road
-  Cb.groundY = (p) => (G.City.colliders.some((b) => b.maxX - b.minX > 3 && b.maxZ - b.minZ > 3 && p.x > b.minX && p.x < b.maxX && p.z > b.minZ && p.z < b.maxZ) ? 0.2 : 0);
+  Cb.groundY = (p) => G.World.groundY(p.x, p.z);
 
   // ---------------------------------------------------------------- on foot
   F.exit = function () {
@@ -226,14 +225,8 @@
     F.pos.addScaledVector(tmp, sp * dt);
     // walls, the microbus and cars
     const r = 0.35;
-    for (const b of G.City.colliders) {
-      if (b.maxX - b.minX > 3 && b.maxZ - b.minZ > 3) {
-        // big blocks: only the building zone (sidewalk is walkable)
-        const inner = { minX: b.minX + G.City.SW, maxX: b.maxX - G.City.SW, minZ: b.minZ + G.City.SW, maxZ: b.maxZ - G.City.SW };
-        const p = G.circleAABB(F.pos.x, F.pos.z, r, inner);
-        if (p) { F.pos.x += p.x; F.pos.z += p.z; }
-      }
-    }
+    const hp = G.World.collideFoot(F.pos.x, F.pos.z, r);
+    if (hp) { F.pos.x += hp.x; F.pos.z += hp.z; }
     const cars = [G.Player].concat(G.Traffic.cars.filter((c) => G.dist2(c.pos, F.pos) < 8));
     for (const c of cars) {
       for (const k of G.Traffic.circles(c, c.pos, c.heading, F._c || (F._c = []))) {
@@ -421,17 +414,12 @@
   Cb.crew = null;
   Cb.crewTimer = 50;
   Cb.startCrew = function () {
-    const Pl = G.Player, P = G.People, C = G.City, NR = C.NR;
+    const Pl = G.Player;
     const fwd = tmp.set(Math.sin(Pl.heading), 0, Math.cos(Pl.heading)).clone();
-    let rp = null;
-    for (let k = 0; k < 40 && !rp; k++) {
-      const ring = P.ringOf(G.randi(0, NR - 2), G.randi(0, NR - 2));
-      const q = P.ringPoint(ring, G.rand(0, 400));
-      const dx = q.x - Pl.pos.x, dz = q.z - Pl.pos.z, d = Math.hypot(dx, dz);
-      if (q.edge > 10 && d > 45 && d < 100 && (dx * fwd.x + dz * fwd.z) / d > 0.4) rp = q;
-    }
+    const rp = G.World.sidewalkAhead(Pl.pos, Pl.heading, 45, 100, 10);
+    void fwd;
     if (!rp) return false;
-    const base = new THREE.Vector3(rp.x, 0.2, rp.z);
+    const base = new THREE.Vector3(rp.x, G.World.groundY(rp.x, rp.z), rp.z);
     const group = new THREE.Group();
     // fallen trunk lying along the curb, branches spilling into the street
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 7, 8), M().mat('#6b4f33'));
@@ -457,7 +445,7 @@
     // block the curb lane while they work
     const box = new THREE.Box3().setFromObject(trunk);
     const col = { minX: box.min.x, maxX: box.max.x, minZ: box.min.z, maxZ: box.max.z };
-    C.colliders.push(col);
+    G.World.addCollider(col);
     Cb.crew = { group, workers, pos: base, col, t: 0, warned: false };
     Cb.sfx('tree_fall', base, 0.9, 4);
     G.HUD.toast('🌳 عمال بيقطعوا شجرة على الرصيف قدامك');
@@ -480,7 +468,7 @@
     if (!c.warned && d < 30) { c.warned = true; say('worker', G.pick(G.TALK2.crew), c.workers[0].obj, 1); }
     if (c.t > 90 || d > 230) {
       A && G.Main.scene.remove(c.group);
-      G.City.colliders = G.City.colliders.filter((x) => x !== c.col);
+      G.World.removeCollider(c.col);
       c.workers.forEach((w) => Cb.remove(w));
       Cb.crew = null;
     }
@@ -493,12 +481,12 @@
     Cb.sirenT = (Cb.sirenT || 0) - dt;
     if (Cb.sirenT <= 0) { Cb.sirenT = G.rand(12, 20); Cb.sfx('siren', null, 0.25, 4); }
     const ref = F.active ? F.pos : G.Player.pos;
-    if (G.dist2(ref, G.City.checkpointPos) < 25) {
+    if (G.dist2(ref, G.World.checkpointPos) < 25) {
       Cb.wanted = 0;
-      Cb.sfx('whistle', G.City.checkpointPos, 0.8, 2);
+      Cb.sfx('whistle', G.World.checkpointPos, 0.8, 2);
       G.Voice.conversation(G.TALK2.arrested, { driver: null, _default: G.People.officers[0] }, 2, null, () => {
         G.Events.addMoney(-2000, 'قضية');
-        const s = G.City.STATIONS[0];
+        const s = G.World.STATIONS[0];
         if (F.active) F.enter();
         G.Player.pos.copy(s.stopPos); G.Player.heading = s.heading; G.Player.speed = 0;
         G.HUD.toast('🚔 اتقبض عليك! خرجت بكفالة ٢٠٠٠ جنيه');

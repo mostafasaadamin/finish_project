@@ -1,7 +1,7 @@
 'use strict';
 (function (G) {
   const Main = (G.Main = { started: false, paused: false, camMode: 0, t: 0 });
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || 'ontouchstart' in window;
+  const isMobile = (Main.isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || 'ontouchstart' in window);
 
   function setupRenderer() {
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
@@ -162,8 +162,8 @@
     Main.sun.target.position.set(p.x, 0, p.z);
     // police lights & the Nile
     const blink = Math.floor(Main.t * 6) % 2;
-    G.City.policeLights[0].visible = !!blink;
-    G.City.policeLights[1].visible = !blink;
+    if (G.World.policeLights) { G.World.policeLights[0].visible = !!blink; G.World.policeLights[1].visible = !blink; }
+    if (G.World.osm && G.City.water) G.City.water.visible = false;
     G.Tex.water.offset.x = Main.t * 0.01;
     G.Tex.water.offset.y = Main.t * 0.004;
     G.HUD.update();
@@ -184,10 +184,12 @@
     status.textContent = 'بنحمّل الصور والأصوات الحقيقية…';
     await G.Assets.load((d, n) => (status.textContent = `بنحمّل الصور الحقيقية… ${d}/${n}`));
     await loadSky();
+    status.textContent = 'بنحمّل خريطة وسط البلد والشجر…';
+    await Promise.all([G.OSM.load(), G.Trees.load()]);
     status.textContent = 'بنبني شوارع القاهرة…';
     await new Promise((r) => setTimeout(r, 30));
     G.Models.buildTextures();
-    G.City.build(Main.scene);
+    G.World.build(Main.scene);
     G.Traffic.init(Main.scene, isMobile ? 26 : 38);
     G.People.init(Main.scene);
     G.Player.init(Main.scene);

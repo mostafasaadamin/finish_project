@@ -7,14 +7,18 @@
   const MIX = ['sedan', 'sedan', 'sedan', 'sedan', 'taxi', 'taxi', 'microbus', 'microbus', 'tuktuk', 'sedan', 'pickup', 'taxi', 'sedan', 'microbus', 'tuktuk', 'bus', 'sedan', 'taxi', 'sedan', 'pickup'];
 
   T.init = function (scene, count) {
+    // on the real map the cars drive the OpenStreetMap road graph
+    if (G.World.osm) G.OSMTraffic.setup(T);
     for (let k = 0; k < count; k++) {
       const v = G.Models.vehicle(MIX[k % MIX.length]);
       const car = Object.assign(v, {
         pos: new THREE.Vector3(), heading: 0, speed: 0, target: new THREE.Vector3(), segDir: new THREE.Vector3(),
         cruise: v.maxSpeed * G.rand(0.75, 1.05), stuck: 0, honkT: 0, stun: 0, fwd: new THREE.Vector3(), pending: null,
+        outer: v.type === 'bus' || v.type === 'tuktuk',
       });
       scene.add(car.mesh);
       T.spawn(car, true);
+      if (G.World.osm) car.mesh.position.set(car.pos.x, 0, car.pos.z);
       T.cars.push(car);
     }
   };

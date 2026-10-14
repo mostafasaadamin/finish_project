@@ -35,7 +35,7 @@
       Pl.body.add(m);
       Pl.blinkers[side].push(m);
     });
-    const s = G.City.STATIONS[0];
+    const s = G.World.STATIONS[0];
     Pl.heading = s.heading;
     Pl.pos.copy(s.stopPos).addScaledVector(new THREE.Vector3(Math.sin(s.heading), 0, Math.cos(s.heading)), -28);
   };
@@ -118,22 +118,19 @@
   };
 
   Pl.collide = function () {
-    const C = G.City;
+    const C = G.World;
     let impact = 0;
     const v = Pl.fwd().multiplyScalar(Pl.speed);
     for (let it = 0; it < 2; it++) {
       G.Traffic.circles(Pl, Pl.pos, Pl.heading, circ);
       for (const c of circ) {
-        for (const b of C.colliders) {
-          if (c.x < b.minX - 2 || c.x > b.maxX + 2 || c.z < b.minZ - 2 || c.z > b.maxZ + 2) continue;
-          const p = G.circleAABB(c.x, c.z, c.r, b);
-          if (!p) continue;
-          Pl.pos.x += p.x; Pl.pos.z += p.z;
-          c.x += p.x; c.z += p.z;
-          const len = Math.hypot(p.x, p.z) || 1;
-          const vn = -(v.x * p.x + v.z * p.z) / len;
-          if (vn > impact) impact = vn;
-        }
+        const p = G.World.collide(c.x, c.z, c.r);
+        if (!p) continue;
+        Pl.pos.x += p.x; Pl.pos.z += p.z;
+        c.x += p.x; c.z += p.z;
+        const len = Math.hypot(p.x, p.z) || 1;
+        const vn = -(v.x * p.x + v.z * p.z) / len;
+        if (vn > impact) impact = vn;
       }
     }
     if (impact > 0.5) {
@@ -176,9 +173,9 @@
       hit.stun = 3;
       if (hitImpact > 2.5) G.Events.crash(hitImpact, hit);
     }
-    const lim = C.MAX + C.RW + 100;
-    Pl.pos.x = G.clamp(Pl.pos.x, -lim, lim);
-    Pl.pos.z = G.clamp(Pl.pos.z, -lim, lim);
+    const bd = G.World.bounds;
+    Pl.pos.x = G.clamp(Pl.pos.x, bd.minX, bd.maxX);
+    Pl.pos.z = G.clamp(Pl.pos.z, bd.minZ, bd.maxZ);
   };
 
   // =================== EVENTS ===================
@@ -278,13 +275,13 @@
     Pl.passengers.forEach((p) => (counts[p.dest] = (counts[p.dest] || 0) + 1));
     const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
     const near = G.People.stations.slice().sort((a, b) => G.dist2(a.s.stopPos, Pl.pos) - G.dist2(b.s.stopPos, Pl.pos));
-    const dest = top != null ? G.City.STATIONS[top].name : near[1].s.name;
+    const dest = top != null ? G.World.STATIONS[top].name : near[1].s.name;
     G.Voice.say('driver', G.Voice.fill(G.pick(G.TALK.callRoute), { dest }), null, 2);
     near.forEach((st) => { if (G.dist2(st.s.stopPos, Pl.pos) < 140) st.boost = 20; });
   };
 
   E.buyFuel = function () {
-    if (G.dist2(Pl.pos, G.City.gasPos) < 30) { G.HUD.toast('اقف جنب البنزينة والعامل هيفوّلك ⛽'); return; }
+    if (G.dist2(Pl.pos, G.World.gasPos) < 30) { G.HUD.toast('اقف جنب البنزينة والعامل هيفوّلك ⛽'); return; }
     if (Pl.money < 250) { G.HUD.toast('الفلوس مش مكفية لبنزين دليفري (٢٥٠ جنيه)'); return; }
     Pl.fuel = Math.min(Pl.maxFuel, Pl.fuel + 10);
     E.addMoney(-250, 'بنزين دليفري');
@@ -292,7 +289,7 @@
   };
 
   E.update = function (dt) {
-    const C = G.City;
+    const C = G.World;
     const stopped = Math.abs(Pl.speed) < 1.3;
     E.stopT -= dt;
 

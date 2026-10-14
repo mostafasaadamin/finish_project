@@ -5,55 +5,30 @@
   const M = () => G.Models;
   const tmp = new THREE.Vector3();
 
-  // ---------- sidewalk rings around blocks ----------
-  const ringOf = (i, j) => {
-    const C = G.City, R = C.R, o = C.RW + 2.2;
-    return { i, j, x0: R[i] + o, x1: R[i + 1] - o, z0: R[j] + o, z1: R[j + 1] - o };
-  };
-  const ringPoint = (r, p) => {
-    const W = r.x1 - r.x0, H = r.z1 - r.z0, L = 2 * (W + H);
-    p = ((p % L) + L) % L;
-    if (p < W) return { x: r.x0 + p, z: r.z0, dx: 1, dz: 0, nx: 0, nz: -1, edge: Math.min(p, W - p) };
-    if (p < W + H) { const q = p - W; return { x: r.x1, z: r.z0 + q, dx: 0, dz: 1, nx: 1, nz: 0, edge: Math.min(q, H - q) }; }
-    if (p < 2 * W + H) { const q = p - W - H; return { x: r.x1 - q, z: r.z1, dx: -1, dz: 0, nx: 0, nz: 1, edge: Math.min(q, W - q) }; }
-    const q = p - 2 * W - H;
-    return { x: r.x0, z: r.z1 - q, dx: 0, dz: -1, nx: -1, nz: 0, edge: Math.min(q, H - q) };
-  };
-  const ringParam = (r, x, z) => {
-    const W = r.x1 - r.x0, H = r.z1 - r.z0;
-    const d = [Math.abs(z - r.z0), Math.abs(x - r.x1), Math.abs(z - r.z1), Math.abs(x - r.x0)];
-    const m = d.indexOf(Math.min(...d));
-    if (m === 0) return G.clamp(x - r.x0, 0, W);
-    if (m === 1) return W + G.clamp(z - r.z0, 0, H);
-    if (m === 2) return W + H + G.clamp(r.x1 - x, 0, W);
-    return 2 * W + H + G.clamp(r.z1 - z, 0, H);
-  };
-  P.ringOf = ringOf; P.ringPoint = ringPoint;
-
   P.init = function (scene) {
     P.scene = scene;
-    const C = G.City, NR = C.NR;
-    // walkers
+    const Wd = G.World;
+    // walkers on the sidewalks
     for (let k = 0; k < 44; k++) {
-      const w = { obj: M().person(), ring: ringOf(G.randi(0, NR - 2), G.randi(0, NR - 2)), mode: 'ring', speed: G.rand(1.1, 1.7), s: G.chance(0.5) ? 1 : -1, yellT: 0, fallT: 0 };
+      const q = Wd.randomSidewalk(2);
+      const w = { obj: M().person(), path: q.path, s: q.s, mode: 'walk', speed: G.rand(1.1, 1.7), dir: G.chance(0.5) ? 1 : -1, yellT: 0 };
       if (w.obj.userData.kind === 'kid') w.speed *= 1.2;
-      w.p = G.rand(0, 400);
       scene.add(w.obj);
       P.walkers.push(w);
     }
     // microbus stops
-    C.STATIONS.forEach((s) => {
+    Wd.STATIONS.forEach((s) => {
       const st = { s, waiting: [], spawnT: G.rand(0, 3), boost: 0, announced: false };
       for (let k = 0; k < G.randi(2, 5); k++) P.addWaiting(st);
       P.stations.push(st);
     });
     // vendors on random sidewalks, away from stops
     let vi = 0;
-    for (let tries = 0; P.vendors.length < 14 && tries < 200; tries++) {
-      const ring = ringOf(G.randi(0, NR - 2), G.randi(0, NR - 2));
-      const rp = ringPoint(ring, G.rand(0, 400));
-      if (rp.edge < 10) continue;
-      const pos = new THREE.Vector3(rp.x + rp.nx * 0.9, 0.2, rp.z + rp.nz * 0.9);
+    for (let tries = 0; P.vendors.length < 14 && tries < 300; tries++) {
+      const rp = Wd.randomSidewalk(10);
+      const pos = new THREE.Vector3(rp.x + rp.nx * 0.9, 0, rp.z + rp.nz * 0.9);
+      pos.y = Wd.groundY(pos.x, pos.z);
+      if (Wd.inBuilding(pos.x, pos.z)) continue;
       if (P.stations.some((st) => G.dist2(st.s.walkPos, pos) < 20) || P.vendors.some((v) => G.dist2(v.pos, pos) < 60)) continue;
       const def = G.VENDORS[vi++ % G.VENDORS.length];
       const faceOut = Math.atan2(rp.nx, rp.nz);
@@ -74,55 +49,49 @@
     }
     // سايس near a few shops
     for (let k = 0; k < 4; k++) {
-      const ring = ringOf(G.randi(0, NR - 2), G.randi(0, NR - 2));
-      const rp = ringPoint(ring, G.rand(0, 400));
+      const rp = Wd.randomSidewalk(4);
       const person = M().person('galabeya', { robe: '#5d4037' });
-      person.position.set(rp.x + rp.nx * 1.5, 0.2, rp.z + rp.nz * 1.5);
+      person.position.set(rp.x + rp.nx * 1.2, 0, rp.z + rp.nz * 1.2);
+      person.position.y = Wd.groundY(person.position.x, person.position.z);
       person.rotation.y = Math.atan2(rp.nx, rp.nz);
       scene.add(person);
       P.vendors.push({ def: { type: 'سايس', lines: G.SAYES_LINES, sayes: true }, pos: person.position, obj: person, person, cool: G.rand(5, 15), waveT: 0 });
     }
     // coffee shops: seated customers + a waiter
-    C.AHWA.forEach((a) => {
+    Wd.AHWA.forEach((a) => {
       const group = [];
       for (let k = 0; k < 5; k++) {
         const per = M().person(G.pick(['man', 'galabeya', 'man']));
         const o = (k - 2) * 1.6;
-        const along = a.side === '-x' ? new THREE.Vector3(0, 0, o) : new THREE.Vector3(o, 0, 0);
-        per.position.copy(a.pos).add(along);
-        per.position.y = 0.2 - 0.42;
+        per.position.set(a.pos.x + a.along.x * o, a.pos.y - 0.42, a.pos.z + a.along.z * o);
         per.rotation.y = a.face + (k % 2 ? Math.PI : 0);
         M().animPerson(per, 'sit', 0);
         scene.add(per);
         group.push(per);
       }
       const waiter = M().person('man', { shirt: '#fafafa' });
-      waiter.position.copy(a.pos).add(new THREE.Vector3(1.2, 0, 1.2));
+      waiter.position.copy(a.pos).add(new THREE.Vector3(a.along.x * 4.5, 0, a.along.z * 4.5));
       scene.add(waiter);
       P.ahwa.push({ a, group, waiter, cool: G.rand(3, 9), li: G.randi(0, 5) });
     });
-    // police officers at the checkpoint
-    const cp = C.checkpointPos;
-    [[-4, 9.2], [3, 9.4], [0, -9.3]].forEach(([dx, dz], k) => {
+    // police officers at the checkpoint, on both edges of the road
+    const cp = Wd.checkpointPos, f = Wd.checkpointFrame;
+    [[-4, 1], [3, 1], [0, -1]].forEach(([along, side], k) => {
       const o = M().person('officer');
-      o.position.set(cp.x + dx, 0, cp.z + dz);
-      o.rotation.y = k === 2 ? 0 : Math.PI;
+      o.position.set(cp.x + f.dx * along + f.nx * side * (f.hw - 0.8), 0, cp.z + f.dz * along + f.nz * side * (f.hw - 0.8));
+      o.rotation.y = Math.atan2(-f.nx * side, -f.nz * side);
       scene.add(o);
       P.officers.push(o);
+      void k;
     });
   };
 
   P.addWaiting = function (st) {
     if (st.waiting.length >= 7) return;
     const s = st.s;
-    const k = st.waiting.length;
     const per = M().person();
-    const along = s.along + (k - 3) * 0.9 + G.rand(-0.2, 0.2);
-    const off = G.rand(1.2, 2.6);
-    G.City.sidePoint(s.axis, G.City.R[s.road], along, s.side, off, per.position);
-    per.position.y = 0.2;
-    // face the road
-    per.rotation.y = s.axis === 'x' ? (s.side > 0 ? Math.PI : 0) : s.side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    per.position.copy(s.waitPoint(st.waiting.length));
+    per.rotation.y = s.faceRoad;
     P.scene.add(per);
     st.waiting.push(per);
   };
@@ -149,48 +118,35 @@
   P.update = function (dt) {
     const Pl = G.Player;
     const ppos = Pl.pos;
-    const C = G.City, NR = C.NR;
-
     // ---- walkers ----
+    const Wd = G.World;
     for (const w of P.walkers.slice()) {
       const o = w.obj;
       const d = G.dist2(o.position, ppos);
-      if (w.fallT > 0) {
-        w.fallT -= dt;
-        o.rotation.x = w.fallT > 1.2 ? -Math.PI / 2 : 0;
-        o.position.y = w.fallT > 1.2 ? 0.35 : o.position.y;
-        continue;
-      }
-      if (w.mode === 'ring') {
-        w.p += w.s * w.speed * dt;
-        const rp = ringPoint(w.ring, w.p);
-        o.position.set(rp.x, 0.2, rp.z);
-        o.rotation.y = Math.atan2(rp.dx * w.s, rp.dz * w.s);
+      if (w.mode === 'walk') {
+        w.s += w.dir * w.speed * dt;
+        if (!w.path.closed && (w.s <= 0 || w.s >= w.path.len)) { w.dir = -w.dir; w.s = G.clamp(w.s, 0, w.path.len); }
+        const q = Wd.pathPoint(w.path, w.s);
+        o.position.set(q.x, Wd.groundY(q.x, q.z), q.z);
+        o.rotation.y = Math.atan2(q.dx * w.dir, q.dz * w.dir);
         // Cairo style: cross the street anywhere
-        if (rp.edge > 10 && G.chance(dt * 0.015)) {
-          const ni = w.ring.i + rp.nx, nj = w.ring.j + rp.nz;
-          if (ni >= 0 && nj >= 0 && ni < NR - 1 && nj < NR - 1) {
-            w.mode = 'cross';
-            w.to = new THREE.Vector3(rp.x + rp.nx * 2 * (C.RW + 2.2), 0.2, rp.z + rp.nz * 2 * (C.RW + 2.2));
-            w.mid = new THREE.Vector3(rp.x + rp.nx * (C.RW + 2.2), 0, rp.z + rp.nz * (C.RW + 2.2));
-            w.n = { x: rp.nx, z: rp.nz };
-            w.nextRing = ringOf(ni, nj);
-          }
+        if (q.edge > 10 && d < 160 && G.chance(dt * 0.015)) {
+          const tx = q.x + q.nx * w.path.crossDist, tz = q.z + q.nz * w.path.crossDist;
+          const np = Wd.nearestPath(tx, tz);
+          if (np && !Wd.inBuilding(tx, tz)) { w.mode = 'cross'; w.to = new THREE.Vector3(tx, 0, tz); w.next = np; }
         }
       } else {
         tmp.subVectors(w.to, o.position).setY(0);
         const len = tmp.length();
         if (len < 0.3) {
-          w.mode = 'ring';
-          w.ring = w.nextRing;
-          w.p = ringParam(w.ring, o.position.x, o.position.z);
+          w.mode = 'walk';
+          w.path = w.next.p; w.s = w.next.s;
         } else {
           tmp.multiplyScalar(1 / len);
           // wait if the microbus is right there
           const close = G.dist2(o.position, ppos) < 9 && Math.abs(Pl.speed) > 2;
           if (!close) o.position.addScaledVector(tmp, w.speed * 1.15 * dt);
-          const fromMid = Math.abs((o.position.x - w.mid.x) * w.n.x + (o.position.z - w.mid.z) * w.n.z);
-          o.position.y = fromMid < C.RW ? 0 : 0.2;
+          o.position.y = Wd.groundY(o.position.x, o.position.z);
           o.rotation.y = Math.atan2(tmp.x, tmp.z);
         }
       }
@@ -211,7 +167,7 @@
             const push = c.r + 0.5 - dd;
             o.position.x += (dx / (dd || 1)) * push;
             o.position.z += (dz / (dd || 1)) * push;
-            if (w.mode === 'ring') w.p = ringParam(w.ring, o.position.x, o.position.z);
+            if (w.mode === 'walk') { const np = Wd.nearestPath(o.position.x, o.position.z); if (np) { w.path = np.p; w.s = np.s; } }
             break;
           }
         }
@@ -292,21 +248,13 @@
 
   P.startFight = function () {
     const Pl = G.Player;
-    const C = G.City, NR = C.NR;
+    const ref = G.Foot.active ? G.Foot.pos : Pl.pos;
     const fwd = new THREE.Vector3(Math.sin(Pl.heading), 0, Math.cos(Pl.heading));
-    let best = null;
-    for (let k = 0; k < 40; k++) {
-      const ring = ringOf(G.randi(0, NR - 2), G.randi(0, NR - 2));
-      const rp = ringPoint(ring, G.rand(0, 400));
-      if (rp.edge < 8) continue;
-      const dx = rp.x - Pl.pos.x, dz = rp.z - Pl.pos.z, d = Math.hypot(dx, dz);
-      if (d < 30 || d > 85) continue;
-      if ((dx * fwd.x + dz * fwd.z) / d < 0.4) continue;
-      best = rp; break;
-    }
+    const best = G.World.sidewalkAhead(ref, G.Foot.active ? G.Foot.heading : Pl.heading, 35, 80, 8);
+    void fwd;
     if (!best) return false;
     const script = G.pick(G.FIGHTS);
-    const pos = new THREE.Vector3(best.x, 0.2, best.z);
+    const pos = new THREE.Vector3(best.x, G.World.groundY(best.x, best.z), best.z);
     const kinds = { fighterA: 'man', fighterB: G.pick(['man', 'galabeya']), fighterF: 'woman', onlooker: 'galabeya', onlooker2: 'galabeya' };
     const cast = script.cast.map((role) => M().person(kinds[role] || 'man'));
     const along = new THREE.Vector3(best.dx, 0, best.dz), out = new THREE.Vector3(best.nx, 0, best.nz);
@@ -324,7 +272,7 @@
       extra.rotation.y = Math.atan2(out.x, out.z);
       cast.push(extra);
     }
-    cast.forEach((c) => { c.position.y = 0.2; P.scene.add(c); });
+    cast.forEach((c) => { c.position.y = G.World.groundY(c.position.x, c.position.z); P.scene.add(c); });
     const anchors = {};
     script.cast.forEach((role, k) => (anchors[role] = cast[k]));
     const f = (P.fight = { pos, cast, t: 0, done: false, doneAt: 0 });

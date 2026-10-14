@@ -212,7 +212,7 @@
     $('money').textContent = G.fmt(Pl.money);
     $('fuel').textContent = Math.floor(Pl.fuel);
     $('fuelPill').classList.toggle('low', Pl.fuel < 8);
-    const name = G.City.roadName(Pl.pos.x, Pl.pos.z);
+    const name = G.World.roadName(Pl.pos.x, Pl.pos.z);
     if (name && name !== H.lastRoad) { H.lastRoad = name; $('street').textContent = name; }
     $('gearD').classList.toggle('on', Pl.gear === 'D');
     $('gearR').classList.toggle('on', Pl.gear === 'R');
@@ -240,16 +240,16 @@
     Pl.passengers.forEach((p) => (counts[p.dest] = (counts[p.dest] || 0) + 1));
     let best = null, bd = 1e9;
     Object.keys(counts).forEach((k) => {
-      const d = G.dist2(G.City.STATIONS[k].stopPos, Pl.pos);
+      const d = G.dist2(G.World.STATIONS[k].stopPos, Pl.pos);
       if (d < bd) { bd = d; best = k; }
     });
     const unpaid = Pl.passengers.filter((p) => !p.paid).length;
-    el.innerHTML = `📍 المحطة الجاية: <b>${G.City.STATIONS[best].name}</b> (${G.arDigits(counts[best])} نازلين) – ${G.arDigits(Math.round(bd))} متر` +
+    el.innerHTML = `📍 المحطة الجاية: <b>${G.World.STATIONS[best].name}</b> (${G.arDigits(counts[best])} نازلين) – ${G.arDigits(Math.round(bd))} متر` +
       (unpaid ? ` · 💰 <b>${G.arDigits(unpaid)}</b> لسه ما دفعوش` : '');
   };
 
   H.drawMinimap = function () {
-    const c = H.mm, x = H.mmx, Pl = G.Player, C = G.City;
+    const c = H.mm, x = H.mmx, Pl = G.Player, C = G.World;
     const W = c.width, Hh = c.height, cx = W / 2, cy = Hh * 0.62;
     const s = W / 230; // pixels per metre
     const h = Pl.heading, cs = Math.cos(h), sn = Math.sin(h);
@@ -259,12 +259,7 @@
     // world -> map: forward is up
     const a = -s * cs, b = -s * sn, cc = s * sn, d = -s * cs;
     x.setTransform(a, b, cc, d, cx - (a * Pl.pos.x + cc * Pl.pos.z), cy - (b * Pl.pos.x + d * Pl.pos.z));
-    x.fillStyle = '#3d7fa0';
-    x.fillRect(C.MAX + C.RW + C.SW + 1, -2000, 2000, 4000);
-    C.blocks.forEach((bk) => {
-      x.fillStyle = bk.type === 'park' ? '#7aa35a' : bk.type === 'corniche' ? '#c8b896' : '#d8cdb5';
-      x.fillRect(bk.minX, bk.minZ, bk.maxX - bk.minX, bk.maxZ - bk.minZ);
-    });
+    G.World.drawMap(x);
     x.setTransform(1, 0, 0, 1, 0, 0);
     const toMap = (wx, wz) => {
       const dx = wx - Pl.pos.x, dz = wz - Pl.pos.z;
