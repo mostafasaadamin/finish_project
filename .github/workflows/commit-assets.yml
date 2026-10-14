@@ -39,8 +39,9 @@ jobs:
           keep = c.get("models", [])[:5]
           ids = {m['id'] for m in keep}
           for d in os.listdir('models') if os.path.isdir('models') else []:
-              if d not in ids:
-                  shutil.rmtree(os.path.join('models', d))
+              p = os.path.join('models', d)
+              if os.path.splitext(d)[0] not in ids:
+                  shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
           c['models'] = keep
           json.dump(c, open('credits.models.json', 'w'), ensure_ascii=False, indent=1)
           print('kept models', sorted(ids))
