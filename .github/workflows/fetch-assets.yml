@@ -1,0 +1,34 @@
+name: Fetch game assets
+
+# Downloads real Cairo recordings (Freesound) and CC0 photo textures (ambientCG, Poly Haven)
+# into cairo_microbus/assets and commits them back to the branch.
+on:
+  push:
+    paths:
+      - 'cairo_microbus/tools/fetch_assets.py'
+      - '.github/workflows/fetch-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download assets
+        run: python3 cairo_microbus/tools/fetch_assets.py sounds ambientcg polyhaven
+      - name: Commit assets
+        run: |
+          du -sh cairo_microbus/assets || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cairo_microbus/assets
+          git diff --cached --quiet && echo "nothing new" && exit 0
+          git commit -m "Add downloaded game assets [skip ci]"
+          git push
