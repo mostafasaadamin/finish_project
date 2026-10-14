@@ -53,7 +53,7 @@
     // ---- city ambience: traffic rumble + crowd murmur ----
     const amb = A.loopNoise(A.brownBuf);
     const ambF = ctx.createBiquadFilter(); ambF.type = 'lowpass'; ambF.frequency.value = 350;
-    const ambG = ctx.createGain(); ambG.gain.value = 0.22;
+    const ambG = (A.synthAmbGain = ctx.createGain()); ambG.gain.value = 0.22;
     amb.connect(ambF); ambF.connect(ambG); ambG.connect(A.master);
     const crowd = A.loopNoise(A.noiseBuf);
     const crF = ctx.createBiquadFilter(); crF.type = 'bandpass'; crF.frequency.value = 900; crF.Q.value = 0.8;
@@ -62,6 +62,101 @@
     A.crowdLevel = 0.015;
 
     A.ready = true;
+    A.loadSamples();
+  };
+
+  // ================= REAL RECORDINGS (assets/sounds) =================
+  // Roles are picked from each recording's title / tags / description.
+  const ROLES = [
+    ['musicHorn', /cucaracha|musical horn/i],
+    ['horn', /\bhorn|honk|klaxon|hooter/i],
+    ['muezzin', /muezzin|adhan|azan|call to prayer|prayer call/i],
+    ['microbus', /microbus|minibus|inside.*bus|bus ride|in a bus/i],
+    ['cafe', /cafe|café|coffee ?shop|shisha|hookah|domino|backgammon/i],
+    ['market', /market|souk|bazaar|hawker|vendor|street seller|crowd|people|walla/i],
+    ['traffic', /traffic|street|road|city|cairo|square|downtown|urban|cars/i],
+  ];
+  A.samples = {};
+  A.sampleRole = (s) => {
+    const text = [s.title, s.description, (s.tags || []).join(' ')].join(' ');
+    for (const [role, re] of ROLES) if (re.test(text)) return role;
+    return null;
+  };
+
+  A.loadSamples = async function () {
+    const list = G.Assets ? G.Assets.sounds() : [];
+    if (!list.length) return;
+    // a few per role is plenty (memory on phones)
+    const per = { traffic: 4, market: 4, horn: 6, musicHorn: 1, muezzin: 1, microbus: 2, cafe: 2 };
+    const picked = {};
+    list.forEach((s) => {
+      const role = A.sampleRole(s);
+      if (!role) return;
+      (picked[role] = picked[role] || []);
+      if (picked[role].length < per[role]) picked[role].push(s);
+    });
+    const jobs = [];
+    Object.entries(picked).forEach(([role, arr]) => arr.forEach((s) => jobs.push(
+      fetch('assets/sounds/' + s.file).then((r) => r.arrayBuffer())
+        .then((b) => new Promise((res, rej) => A.ctx.decodeAudioData(b, res, rej)))
+        .then((buf) => { (A.samples[role] = A.samples[role] || []).push({ buf, info: s }); })
+        .catch(() => {}),
+    )));
+    await Promise.all(jobs);
+    A.startBeds();
+  };
+
+  A.hasSample = (role) => !!(A.samples[role] && A.samples[role].length);
+
+  // looping ambience beds: city traffic always, market crowd and microbus interior faded in by the game
+  A.beds = {};
+  A.startBeds = function () {
+    const bed = (role, vol) => {
+      if (!A.hasSample(role)) return;
+      const src = A.ctx.createBufferSource();
+      src.buffer = G.pick(A.samples[role]).buf;
+      src.loop = true;
+      const g = A.ctx.createGain();
+      g.gain.value = vol;
+      src.connect(g); g.connect(A.master);
+      src.start(0, Math.random() * Math.max(0, src.buffer.duration - 1));
+      A.beds[role] = { src, g, base: vol };
+    };
+    bed('traffic', 0.55);
+    bed('market', 0);
+    bed('microbus', 0);
+    bed('cafe', 0);
+    // the recordings replace the synthesized hiss
+    if (A.beds.traffic) A.synthAmbGain.gain.setTargetAtTime(0.05, A.now(), 1);
+    if (A.beds.market) A.crowdGain.gain.setTargetAtTime(0, A.now(), 1);
+    // occasional far call to prayer
+    if (A.hasSample('muezzin')) setTimeout(() => A.playSample('muezzin', null, 0.25), 45000);
+  };
+
+  A.setBed = function (role, level) {
+    const b = A.beds[role];
+    if (b) b.g.gain.setTargetAtTime(level, A.now(), 0.6);
+  };
+
+  // one-shot of a recording (random slice for long files), optionally positioned in the world
+  A.playSample = function (role, pos, vol, maxLen) {
+    if (!A.ready || !A.hasSample(role)) return false;
+    const dest = A.spatial(pos, 140, vol == null ? 0.6 : vol);
+    if (!dest) return true;
+    const { buf } = G.pick(A.samples[role]);
+    const src = A.ctx.createBufferSource();
+    src.buffer = buf;
+    const len = Math.min(buf.duration, maxLen || buf.duration);
+    const offset = buf.duration > len ? Math.random() * (buf.duration - len) : 0;
+    const g = A.ctx.createGain();
+    const t = A.now();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(1, t + 0.05);
+    g.gain.setValueAtTime(1, t + Math.max(0.06, len - 0.15));
+    g.gain.linearRampToValueAtTime(0, t + len);
+    src.connect(g); g.connect(dest);
+    src.start(t, offset, len + 0.05);
+    return true;
   };
 
   A.loopNoise = function (buf) {
@@ -143,6 +238,7 @@
 
   A.setCrowd = function (level) {
     if (!A.ready) return;
+    if (A.beds.market) { A.setBed('market', G.clamp(level * 6, 0, 0.6)); return; }
     A.crowdGain.gain.setTargetAtTime(level, A.now(), 0.5);
   };
 
@@ -173,6 +269,7 @@
   // The famous "musical horn" of Cairo microbuses
   A.musicHorn = function () {
     if (!A.ready) return;
+    if (A.playSample('musicHorn', null, 0.5, 4)) return;
     const dest = A.spatial(null, 0, 0.12);
     const N = { G4: 392, C5: 523.25, E5: 659.25, B4: 493.88, A4: 440, F4: 349.23, D5: 587.33 };
     const seq = [['G4', 1], ['G4', 1], ['G4', 1], ['C5', 2], ['E5', 2], [null, 1], ['G4', 1], ['G4', 1], ['G4', 1], ['C5', 2], ['E5', 3], [null, 1],
@@ -186,6 +283,7 @@
   };
 
   A.aiHorn = function (pos) {
+    if (A.playSample('horn', pos, 0.5, 1.6)) return;
     const dest = A.spatial(pos, 120, 0.09);
     if (!dest) return;
     const t = A.now();

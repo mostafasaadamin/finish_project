@@ -6,57 +6,104 @@
   const Mat = (G.Mat = {});
 
   // ================= TEXTURES =================
+  // Photo textures (G.Assets) are used when available; otherwise everything is drawn procedurally.
+  const PH = () => G.Assets && G.Assets.ok;
+  // compose a canvas by tiling one photo map, then optionally paint on top
+  const photoCanvas = (w, h, surface, kind, tilePx, paint) => {
+    const im = PH() ? G.Assets.image(surface, kind) : null;
+    if (!im) return null;
+    const c = G.canvas(w, h), x = c.getContext('2d');
+    G.Assets.tileInto(x, im, 0, 0, w, h, tilePx);
+    if (paint) paint(x, w, h);
+    return c;
+  };
+  const dataTex = (c, repeat) => {
+    if (!c) return null;
+    const t = new THREE.CanvasTexture(c);
+    if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    return t; // linear data (normal / roughness)
+  };
+  // Standard material, with optional normal/roughness maps
+  const std = (opts) => new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.9, metalness: 0 }, opts));
+
   M.buildTextures = function () {
-    // asphalt
-    let c = G.canvas(256, 256), x = c.getContext('2d');
-    x.fillStyle = '#5a5a58'; x.fillRect(0, 0, 256, 256);
-    G.noise(x, 256, 256, 9000, 0.08);
-    for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(30,30,30,0.18)'; x.beginPath(); x.ellipse(G.rand(0, 256), G.rand(0, 256), G.rand(10, 40), G.rand(6, 25), G.rand(0, 3), 0, 7); x.fill(); }
-    Tex.asphalt = G.tex(c, true);
-
-    // road with lanes: horizontal = along road (12 m), vertical = across (20 m)
-    c = G.canvas(512, 256); x = c.getContext('2d');
-    x.drawImage(Tex.asphalt.image, 0, 0, 512, 256);
-    x.drawImage(Tex.asphalt.image, 256, 0, 256, 256);
-    const Y = (p) => ((p + 10) / 20) * 256;
-    x.fillStyle = '#e8b923';
-    [-1.05, 1.05, -9.5, 9.5].forEach((p) => x.fillRect(0, Y(p) - 1.5, 512, 3));
-    x.fillStyle = '#eeeeee';
-    [-5.4, 5.4].forEach((p) => x.fillRect(0, Y(p) - 1.5, 256, 3));
-    x.fillStyle = 'rgba(0,0,0,0.25)';
-    x.fillRect(0, 0, 512, 4); x.fillRect(0, 252, 512, 4);
-    G.noise(x, 512, 256, 2500, 0.05);
-    Tex.road = G.tex(c, true);
-
-    // paving tiles (2m)
-    c = G.canvas(128, 128); x = c.getContext('2d');
-    x.fillStyle = '#b9ab92'; x.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-      x.fillStyle = `hsl(36,${15 + Math.random() * 10}%,${58 + Math.random() * 8}%)`;
-      x.fillRect(i * 32 + 1, j * 32 + 1, 30, 30);
+    // ---- asphalt ----
+    let c = photoCanvas(512, 512, 'asphalt', 'Color', 256, (x) => {
+      x.globalCompositeOperation = 'multiply'; x.fillStyle = '#b8b5ae'; x.fillRect(0, 0, 512, 512);
+      x.globalCompositeOperation = 'source-over';
+    });
+    let x;
+    if (!c) {
+      c = G.canvas(256, 256); x = c.getContext('2d');
+      x.fillStyle = '#5a5a58'; x.fillRect(0, 0, 256, 256);
+      G.noise(x, 256, 256, 9000, 0.08);
     }
-    G.noise(x, 128, 128, 1500, 0.08);
-    Tex.paving = G.tex(c, true);
+    x = c.getContext('2d');
+    for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(20,20,20,0.16)'; x.beginPath(); x.ellipse(G.rand(0, c.width), G.rand(0, c.height), G.rand(10, 60), G.rand(6, 35), G.rand(0, 3), 0, 7); x.fill(); }
+    Tex.asphalt = G.tex(c, true);
+    Tex.asphaltN = dataTex(photoCanvas(512, 512, 'asphalt', 'NormalGL', 256), true);
+    Tex.asphaltR = dataTex(photoCanvas(512, 512, 'asphalt', 'Roughness', 256), true);
 
-    // black & white painted curb (2m period)
-    c = G.canvas(128, 32); x = c.getContext('2d');
-    x.fillStyle = '#1d1d1d'; x.fillRect(0, 0, 64, 32);
-    x.fillStyle = '#ecece4'; x.fillRect(64, 0, 64, 32);
-    G.noise(x, 128, 32, 400, 0.15);
+    // ---- road with lanes: horizontal = along road (12 m), vertical = across (20 m) ----
+    const RW_ = 1024, RH = 512, tile = 256; // one photo tile ~ 3 m
+    c = G.canvas(RW_, RH); x = c.getContext('2d');
+    if (!G.Assets || !G.Assets.tileInto(x, PH() && G.Assets.image('asphalt'), 0, 0, RW_, RH, tile)) {
+      x.drawImage(Tex.asphalt.image, 0, 0, RW_ / 2, RH); x.drawImage(Tex.asphalt.image, RW_ / 2, 0, RW_ / 2, RH);
+    } else { x.globalCompositeOperation = 'multiply'; x.fillStyle = '#b8b5ae'; x.fillRect(0, 0, RW_, RH); x.globalCompositeOperation = 'source-over'; }
+    const Y = (p) => ((p + 10) / 20) * RH;
+    // worn paint: draw lines then scratch them
+    const line = (y, w, color, dash) => {
+      x.fillStyle = color;
+      for (let px = 0; px < (dash ? RW_ / 2 : RW_); px += 4) { if (Math.random() < 0.9) x.fillRect(px, y - w / 2 + G.rand(-0.4, 0.4), 4, w); }
+    };
+    [-1.05, 1.05, -9.5, 9.5].forEach((p) => line(Y(p), 5, 'rgba(226,178,40,0.85)'));
+    [-5.4, 5.4].forEach((p) => line(Y(p), 5, 'rgba(235,235,230,0.85)', true));
+    x.fillStyle = 'rgba(0,0,0,0.25)';
+    x.fillRect(0, 0, RW_, 7); x.fillRect(0, RH - 7, RW_, 7);
+    // oil stains in the middle of each lane
+    for (let i = 0; i < 18; i++) { x.fillStyle = 'rgba(10,10,10,0.12)'; x.beginPath(); x.ellipse(G.rand(0, RW_), Y(G.pick([-7.6, -3.2, 3.2, 7.6])) + G.rand(-12, 12), G.rand(10, 40), G.rand(4, 12), 0, 0, 7); x.fill(); }
+    Tex.road = G.tex(c, true);
+    Tex.roadN = dataTex(photoCanvas(RW_, RH, 'asphalt', 'NormalGL', tile), true);
+    Tex.roadR = dataTex(photoCanvas(RW_, RH, 'asphalt', 'Roughness', tile), true);
+
+    // ---- sidewalk paving (texture spans 2 m) ----
+    c = photoCanvas(512, 512, 'sidewalk', 'Color', 512, (x2) => {
+      x2.globalCompositeOperation = 'multiply'; x2.fillStyle = '#d9cbb0'; x2.fillRect(0, 0, 512, 512); x2.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 6; i++) { x2.fillStyle = 'rgba(60,45,25,0.08)'; x2.beginPath(); x2.arc(G.rand(0, 512), G.rand(0, 512), G.rand(20, 90), 0, 7); x2.fill(); }
+    });
+    if (!c) {
+      c = G.canvas(128, 128); x = c.getContext('2d');
+      x.fillStyle = '#b9ab92'; x.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { x.fillStyle = `hsl(36,${15 + Math.random() * 10}%,${58 + Math.random() * 8}%)`; x.fillRect(i * 32 + 1, j * 32 + 1, 30, 30); }
+      G.noise(x, 128, 128, 1500, 0.08);
+    }
+    Tex.paving = G.tex(c, true);
+    Tex.pavingN = dataTex(photoCanvas(512, 512, 'sidewalk', 'NormalGL', 512), true);
+
+    // ---- black & white painted curb over concrete (2 m period) ----
+    c = G.canvas(256, 64); x = c.getContext('2d');
+    G.Assets && PH() && G.Assets.tileInto(x, G.Assets.image('concrete'), 0, 0, 256, 64, 128);
+    x.globalCompositeOperation = PH() ? 'multiply' : 'source-over';
+    x.fillStyle = '#2a2a2a'; x.fillRect(0, 0, 128, 64);
+    x.fillStyle = '#f2f2ea'; x.fillRect(128, 0, 128, 64);
+    x.globalCompositeOperation = 'source-over';
+    G.noise(x, 256, 64, 600, 0.12);
+    x.fillStyle = 'rgba(60,50,40,0.25)'; x.fillRect(0, 50, 256, 14);
     Tex.curb = G.tex(c, true);
 
-    // roof concrete
-    c = G.canvas(128, 128); x = c.getContext('2d');
-    x.fillStyle = '#9d968a'; x.fillRect(0, 0, 128, 128);
-    G.noise(x, 128, 128, 2500, 0.12);
-    x.strokeStyle = 'rgba(0,0,0,0.15)';
-    for (let i = 0; i < 128; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 128); x.moveTo(0, i); x.lineTo(128, i); x.stroke(); }
+    // ---- roof concrete ----
+    c = photoCanvas(256, 256, 'concrete', 'Color', 256);
+    if (!c) {
+      c = G.canvas(128, 128); x = c.getContext('2d');
+      x.fillStyle = '#9d968a'; x.fillRect(0, 0, 128, 128);
+      G.noise(x, 128, 128, 2500, 0.12);
+    }
     Tex.roof = G.tex(c, true);
 
-    // sand ground
-    c = G.canvas(256, 256); x = c.getContext('2d');
-    x.fillStyle = '#c4ad86'; x.fillRect(0, 0, 256, 256);
-    G.noise(x, 256, 256, 8000, 0.08);
+    // ---- sand ground ----
+    c = photoCanvas(512, 512, 'sand', 'Color', 512, (x2) => { x2.globalCompositeOperation = 'multiply'; x2.fillStyle = '#e8d6b0'; x2.fillRect(0, 0, 512, 512); x2.globalCompositeOperation = 'source-over'; });
+    if (!c) { c = G.canvas(256, 256); x = c.getContext('2d'); x.fillStyle = '#c4ad86'; x.fillRect(0, 0, 256, 256); G.noise(x, 256, 256, 8000, 0.08); }
     Tex.sand = G.tex(c, true);
 
     // grass
@@ -72,35 +119,49 @@
     Tex.water = G.tex(c, true);
 
     Tex.facades = [
-      ['#d8c3a0', '#8a6d48'], ['#c9a77c', '#6e5235'], ['#e2cfb0', '#7d6a55'], ['#b9a48a', '#4f4a44'], ['#d6b796', '#8b4f37'],
-    ].map(([b, a]) => G.tex(M.facadeCanvas(b, a), true));
+      ['#d8c3a0', '#8a6d48'], ['#c9a77c', '#6e5235'], ['#e2cfb0', '#7d6a55'], ['#b9a48a', '#4f4a44'], ['#d6b796', '#8b4f37'], ['#cdb08e', '#5d4a3a'],
+    ].map(([b, a], i) => G.tex(M.facadeCanvas(b, a, i), true));
+    // plaster surface detail shared by all facades (window cells stay roughly flat)
+    Tex.facadeN = dataTex(photoCanvas(512, 512, 'plaster', 'NormalGL', 128), true);
     Tex.shops = G.tex(M.shopAtlas(), false);
     Tex.billboards = G.tex(M.billboardAtlas(), false);
     Tex.streetSigns = G.tex(M.streetSignAtlas(), false);
     Tex.plate = G.tex(M.plateCanvas(), false);
 
-    // materials
-    Mat.vc = new THREE.MeshLambertMaterial({ vertexColors: true });
-    Mat.road = new THREE.MeshLambertMaterial({ map: Tex.road });
-    Mat.asphalt = new THREE.MeshLambertMaterial({ map: Tex.asphalt });
-    Mat.paving = new THREE.MeshLambertMaterial({ map: Tex.paving });
-    Mat.curb = new THREE.MeshLambertMaterial({ map: Tex.curb });
-    Mat.roof = new THREE.MeshLambertMaterial({ map: Tex.roof });
-    Mat.sand = new THREE.MeshLambertMaterial({ map: Tex.sand });
-    Mat.grass = new THREE.MeshLambertMaterial({ map: Tex.grass });
-    Mat.water = new THREE.MeshLambertMaterial({ map: Tex.water, transparent: true, opacity: 0.92 });
-    Mat.facades = Tex.facades.map((t) => new THREE.MeshLambertMaterial({ map: t }));
-    Mat.shops = new THREE.MeshLambertMaterial({ map: Tex.shops });
-    Mat.billboards = new THREE.MeshLambertMaterial({ map: Tex.billboards });
-    Mat.streetSigns = new THREE.MeshLambertMaterial({ map: Tex.streetSigns });
+    // ---- materials ----
+    const nScale = (v) => new THREE.Vector2(v, v);
+    Mat.vc = std({ vertexColors: true, roughness: 0.85 });
+    Mat.car = std({ vertexColors: true, roughness: 0.32, metalness: 0.35, envMapIntensity: 1.2 });
+    Mat.road = std({ map: Tex.road, normalMap: Tex.roadN, roughnessMap: Tex.roadR, normalScale: nScale(0.8) });
+    Mat.asphalt = std({ map: Tex.asphalt, normalMap: Tex.asphaltN, roughnessMap: Tex.asphaltR, normalScale: nScale(0.8) });
+    Mat.paving = std({ map: Tex.paving, normalMap: Tex.pavingN, roughness: 0.85 });
+    Mat.curb = std({ map: Tex.curb, roughness: 0.8 });
+    Mat.roof = std({ map: Tex.roof, roughness: 0.95 });
+    Mat.sand = std({ map: Tex.sand, roughness: 1 });
+    Mat.grass = std({ map: Tex.grass, roughness: 1 });
+    Mat.water = std({ map: Tex.water, transparent: true, opacity: 0.9, roughness: 0.15, metalness: 0.1 });
+    Mat.facades = Tex.facades.map((t) => std({ map: t, normalMap: Tex.facadeN, normalScale: nScale(0.6), roughness: 0.92 }));
+    Mat.shops = std({ map: Tex.shops, roughness: 0.7 });
+    Mat.billboards = std({ map: Tex.billboards, roughness: 0.6 });
+    Mat.streetSigns = std({ map: Tex.streetSigns, roughness: 0.5 });
     Mat.plate = new THREE.MeshBasicMaterial({ map: Tex.plate });
   };
 
   // 4 columns x 4 floors, each column 3m, each floor 3.2m => 12m x 12.8m per repeat
-  M.facadeCanvas = function (base, accent) {
+  M.facadeCanvas = function (base, accent, variant) {
     const c = G.canvas(512, 512), x = c.getContext('2d');
-    x.fillStyle = base; x.fillRect(0, 0, 512, 512);
-    G.noise(x, 512, 512, 7000, 0.06);
+    const plaster = PH() && G.Assets.image(variant % 2 ? 'plaster2' : 'plaster');
+    if (plaster) {
+      // real plaster photo tinted to the building's paint colour
+      G.Assets.tileInto(x, plaster, 0, 0, 512, 512, 128);
+      x.globalCompositeOperation = 'multiply';
+      x.fillStyle = base; x.fillRect(0, 0, 512, 512);
+      x.globalCompositeOperation = 'source-over';
+      x.fillStyle = 'rgba(255,245,225,0.12)'; x.fillRect(0, 0, 512, 512);
+    } else {
+      x.fillStyle = base; x.fillRect(0, 0, 512, 512);
+      G.noise(x, 512, 512, 7000, 0.06);
+    }
     for (let i = 0; i < 30; i++) { x.fillStyle = 'rgba(70,50,30,0.06)'; x.fillRect(G.rand(0, 512), G.rand(0, 512), G.rand(2, 10), G.rand(30, 220)); }
     const shutters = ['#6b4a2b', '#3f5a3a', '#7a6a50', '#5d4037', '#4b6a6e'];
     const clothes = ['#e53935', '#1e88e5', '#fdd835', '#ffffff', '#43a047', '#8e24aa', '#ff7043'];
@@ -339,7 +400,7 @@
       default: parts = M.sedanParts(G.pick(M.SEDAN_COLORS)); len = 4.3; wid = 1.76; maxSpeed = 16;
     }
     const group = new THREE.Group();
-    const body = new THREE.Mesh(G.merge(parts), Mat.vc);
+    const body = new THREE.Mesh(G.merge(parts), Mat.car);
     body.castShadow = true;
     group.add(body);
     return { mesh: group, body, len, wid, maxSpeed, type };
@@ -347,7 +408,7 @@
 
   // ================= PEOPLE =================
   const matCache = {};
-  M.mat = (color) => matCache[color] || (matCache[color] = new THREE.MeshLambertMaterial({ color }));
+  M.mat = (color) => matCache[color] || (matCache[color] = Object.assign(new THREE.MeshStandardMaterial({ color: new THREE.Color(color).convertSRGBToLinear(), roughness: 0.85 }), { userData: { linear: true } }));
   let geo = null;
   const initPersonGeo = () => {
     geo = {

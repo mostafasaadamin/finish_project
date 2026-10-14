@@ -29,6 +29,7 @@ window.G = window.G || {};
     const t = new THREE.CanvasTexture(canvas);
     if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = 4;
+    t.encoding = THREE.sRGBEncoding; // canvases hold colour images
     return t;
   };
   G.noise = (ctx, w, h, count, alpha, dark) => {
@@ -51,7 +52,7 @@ window.G = window.G || {};
 
   // ---------- geometry ----------
   G.colorize = (geo, color) => {
-    const c = new THREE.Color(color);
+    const c = new THREE.Color(color).convertSRGBToLinear();
     const n = geo.attributes.position.count;
     const arr = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }

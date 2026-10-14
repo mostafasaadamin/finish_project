@@ -7,6 +7,9 @@
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('game').appendChild(renderer.domElement);
@@ -18,10 +21,12 @@
     gr.addColorStop(0, '#8fb8d8'); gr.addColorStop(0.55, '#c9d6dc'); gr.addColorStop(1, '#e6d9bd');
     sx.fillStyle = gr; sx.fillRect(0, 0, 4, 256);
     scene.background = G.tex(sky);
-    scene.fog = new THREE.Fog('#d9cfb8', 90, 520);
+    // Cairo haze
+    scene.fog = new THREE.Fog(new THREE.Color('#d8cdb4').convertSRGBToLinear(), 80, 560);
 
-    scene.add(new THREE.HemisphereLight('#dbe8f5', '#9c8a6a', 0.75));
-    const sun = (Main.sun = new THREE.DirectionalLight('#fff3dc', 0.95));
+    Main.hemi = new THREE.HemisphereLight(new THREE.Color('#dbe8f5').convertSRGBToLinear(), new THREE.Color('#9c8a6a').convertSRGBToLinear(), 0.9);
+    scene.add(Main.hemi);
+    const sun = (Main.sun = new THREE.DirectionalLight(new THREE.Color('#fff1d6').convertSRGBToLinear(), 2.6));
     sun.castShadow = true;
     const sz = isMobile ? 1024 : 2048;
     sun.shadow.mapSize.set(sz, sz);
@@ -35,6 +40,38 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       Main.camera.aspect = window.innerWidth / window.innerHeight;
       Main.camera.updateProjectionMatrix();
+    });
+  }
+
+  // real sky photo (HDR) for background and image-based lighting
+  function loadSky() {
+    const url = G.Assets.hdri();
+    if (!url || !THREE.RGBELoader) return Promise.resolve(false);
+    return new Promise((res) => {
+      new THREE.RGBELoader().setDataType(THREE.UnsignedByteType).load(url, (hdr) => {
+        const pm = new THREE.PMREMGenerator(Main.renderer);
+        const env = pm.fromEquirectangular(hdr).texture;
+        Main.scene.environment = env;
+        hdr.mapping = THREE.EquirectangularReflectionMapping;
+        Main.scene.background = hdr;
+        Main.hemi.intensity = 0.35;
+        pm.dispose();
+        res(true);
+      }, undefined, () => res(false));
+    });
+  }
+
+  // materials built with plain hex colours were authored in sRGB; convert once for the linear pipeline
+  function linearizeMaterials(root) {
+    const seen = new Set();
+    root.traverse((o) => {
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      mats.forEach((m) => {
+        if (seen.has(m) || (m.userData && m.userData.linear)) return;
+        seen.add(m);
+        if (m.color && m.color.getHex() !== 0xffffff) m.color.convertSRGBToLinear();
+        m.userData.linear = true;
+      });
     });
   }
 
@@ -65,6 +102,19 @@
     G.Audio.listener.x = Pl.pos.x; G.Audio.listener.z = Pl.pos.z; G.Audio.listener.h = Pl.heading;
   }
 
+  // real-recording ambience follows where the microbus is
+  function updateAmbience() {
+    const A = G.Audio, Pl = G.Player, Pe = G.People;
+    if (!A.ready || !A.beds) return;
+    const near = (list, get) => list.reduce((m, o) => Math.min(m, G.dist2(get(o), Pl.pos)), 1e9);
+    const dv = near(Pe.vendors, (v) => v.pos), ds = near(Pe.stations, (s) => s.s.walkPos);
+    const da = near(Pe.ahwa, (a) => a.a.pos);
+    if (!Pe.fight) A.setBed('market', G.clamp(0.45 - Math.min(dv, ds) / 120, 0.05, 0.45));
+    A.setBed('cafe', G.clamp(0.5 - da / 60, 0, 0.5));
+    A.setBed('microbus', Pl.passengers.length ? 0.18 + Pl.passengers.length * 0.012 : 0.06);
+    A.setBed('traffic', 0.4 + G.clamp(Math.abs(Pl.speed) / 30, 0, 0.25));
+  }
+
   function loop() {
     requestAnimationFrame(loop);
     const now = performance.now();
@@ -79,6 +129,7 @@
     G.People.update(dt);
     G.Events.update(dt);
     updateCamera(dt);
+    if (Math.floor(Main.t * 4) !== Math.floor((Main.t - dt) * 4)) updateAmbience();
     // sun + shadows follow the microbus
     const p = G.Player.pos;
     Main.sun.position.set(p.x + 60, 110, p.z + 35);
@@ -104,11 +155,17 @@
     status.textContent = 'بنبني شوارع القاهرة…';
     await new Promise((r) => setTimeout(r, 30));
     setupRenderer();
+    status.textContent = 'بنحمّل الصور والأصوات الحقيقية…';
+    await G.Assets.load((d, n) => (status.textContent = `بنحمّل الصور الحقيقية… ${d}/${n}`));
+    await loadSky();
+    status.textContent = 'بنبني شوارع القاهرة…';
+    await new Promise((r) => setTimeout(r, 30));
     G.Models.buildTextures();
     G.City.build(Main.scene);
     G.Traffic.init(Main.scene, isMobile ? 26 : 38);
     G.People.init(Main.scene);
     G.Player.init(Main.scene);
+    linearizeMaterials(Main.scene);
     G.HUD.init();
     G.Voice.init();
     updateCamera(0, true);
