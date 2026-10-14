@@ -129,7 +129,12 @@
     const Wd = G.World;
     for (const w of P.walkers.slice()) {
       const o = w.obj;
-      const d = G.dist2(o.position, ppos);
+      let d = G.dist2(o.position, ppos);
+      // keep the streets around the microbus busy: far walkers reappear nearby (out of sight range)
+      if (w.mode === 'walk' && d > (G.Main.isMobile ? 120 : 170) && G.chance(dt * 2)) {
+        const q = Wd.sidewalkNear(ppos, 35, G.Main.isMobile ? 95 : 130);
+        if (q) { w.path = q.path; w.s = q.s; d = G.dist2(q, ppos); }
+      }
       if (w.mode === 'walk') {
         w.s += w.dir * w.speed * dt;
         if (!w.path.closed && (w.s <= 0 || w.s >= w.path.len)) { w.dir = -w.dir; w.s = G.clamp(w.s, 0, w.path.len); }

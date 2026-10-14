@@ -7,19 +7,25 @@
   const cache = {};
   const lin = (c) => new THREE.Color(c).convertSRGBToLinear();
   const tag = (m) => { m.userData.linear = true; return m; };
+  // phones: plain standard materials instead of clear-coat physical ones (much cheaper shaders)
+  const PhysMat = function (o) {
+    if (!(G.Main && G.Main.isMobile)) return new THREE.MeshPhysicalMaterial(o);
+    const q = Object.assign({}, o); delete q.clearcoat; delete q.clearcoatRoughness;
+    return new THREE.MeshStandardMaterial(q);
+  };
 
   // ---------- shared materials ----------
   function mats() {
     if (cache.mats) return cache.mats;
     const M = {};
-    M.glass = tag(new THREE.MeshPhysicalMaterial({ color: lin('#0d1216'), roughness: 0.04, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.78, envMapIntensity: 1.6 }));
+    M.glass = tag(new PhysMat({ color: lin('#0d1216'), roughness: 0.04, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.78, envMapIntensity: 1.6 }));
     M.rubber = tag(new THREE.MeshStandardMaterial({ color: lin('#1b1b1c'), roughness: 0.92, metalness: 0 }));
     M.plastic = tag(new THREE.MeshStandardMaterial({ color: lin('#232425'), roughness: 0.7, metalness: 0 }));
     M.chrome = tag(new THREE.MeshStandardMaterial({ color: lin('#e8e8e8'), roughness: 0.12, metalness: 1, envMapIntensity: 1.3 }));
     M.steel = tag(new THREE.MeshStandardMaterial({ color: lin('#7d8186'), roughness: 0.45, metalness: 0.8 }));
-    M.lampGlass = tag(new THREE.MeshPhysicalMaterial({ color: lin('#f6f6f2'), roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: lin('#fff3d6'), emissiveIntensity: 0.15 }));
-    M.tail = tag(new THREE.MeshPhysicalMaterial({ color: lin('#9c0c0c'), roughness: 0.15, clearcoat: 1, emissive: lin('#5a0000'), emissiveIntensity: 0.4 }));
-    M.amber = tag(new THREE.MeshPhysicalMaterial({ color: lin('#e08a00'), roughness: 0.15, clearcoat: 1, emissive: lin('#3a2000'), emissiveIntensity: 0.4 }));
+    M.lampGlass = tag(new PhysMat({ color: lin('#f6f6f2'), roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: lin('#fff3d6'), emissiveIntensity: 0.15 }));
+    M.tail = tag(new PhysMat({ color: lin('#9c0c0c'), roughness: 0.15, clearcoat: 1, emissive: lin('#5a0000'), emissiveIntensity: 0.4 }));
+    M.amber = tag(new PhysMat({ color: lin('#e08a00'), roughness: 0.15, clearcoat: 1, emissive: lin('#3a2000'), emissiveIntensity: 0.4 }));
     M.seat = tag(new THREE.MeshStandardMaterial({ color: lin('#3a3530'), roughness: 0.95 }));
     M.cabin = tag(new THREE.MeshStandardMaterial({ color: lin('#2a2826'), roughness: 0.95, side: THREE.BackSide }));
     // tyre with tread grooves (bump)
@@ -201,7 +207,7 @@
     prof.push([-2.38, 0.4], [-2.42, 0.62], [-2.42, 1.82], [-2.36, 1.97], [-2.22, 2.0], [1.62, 2.0], [1.82, 1.96], [1.96, 1.86],
       [2.28, 1.2], [2.38, 1.1], [2.42, 0.95], [2.42, 0.55]);
     const geo = body(prof, W, opt);
-    const paint = tag(new THREE.MeshPhysicalMaterial({
+    const paint = tag(new PhysMat({
       color: 0xffffff, map: paintTex(opts.color || '#f2f2ee', opts.stripes || [[0.5, 0.515, '#1b6e3a'], [0.522, 0.552, '#d9771f'], [0.559, 0.574, '#1b6e3a']], opts.dirt == null ? 0.8 : opts.dirt, { seams: [[2.02, 0.2, 0.6], [1.12, 0.2, 0.6], [0.55, 0.2, 0.6], [-0.5, 0.2, 0.6], [-2.38, 0.3, 0.9]] }),
       roughness: 0.32, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1,
     }));
@@ -340,14 +346,14 @@
   };
 
   // merge every static mesh of a vehicle by material (few draw calls per car); wheels stay apart
-  V.bake = function (root, keep) {
+  V.bake = function (root, keep, all) {
     root.updateMatrixWorld(true);
     const groups = new Map();
     const remove = [];
     root.traverse((o) => {
       if (!o.isMesh || (keep && keep(o))) return;
       let k = o; let skip = false;
-      while (k && k !== root) { if (k.userData.spin || k.userData.keep) skip = true; k = k.parent; }
+      while (k && k !== root) { if (!all && (k.userData.spin || k.userData.keep)) skip = true; k = k.parent; }
       if (skip) return;
       const g = o.geometry.index ? o.geometry.clone() : o.geometry.clone();
       g.applyMatrix4(o.matrixWorld);
@@ -377,7 +383,7 @@
     prof.push([-sp.L / 2 + 0.05, sp.sill]);
     sp.upper.forEach((q) => prof.push(q));
     const geo = body(prof, W, opt);
-    const paint = tag(new THREE.MeshPhysicalMaterial({
+    const paint = tag(new PhysMat({
       color: 0xffffff, map: paintTex(sp.color, sp.stripes || [], sp.dirt == null ? 0.5 : sp.dirt, { seams: sp.seams || [], checker: sp.checker }),
       roughness: 0.3, metalness: sp.metallic ? 0.35 : 0.05, clearcoat: 1, clearcoatRoughness: 0.08,
     }));
@@ -386,7 +392,7 @@
     root.add(bm);
     // roof paint (e.g. black-and-white taxis) as a thin cap
     if (sp.roofColor) {
-      const rc = new THREE.Mesh(new THREE.BoxGeometry(halfAt(W, sp.top, opt) * 2 - 0.12, 0.02, sp.roofLen), tag(new THREE.MeshPhysicalMaterial({ color: lin(sp.roofColor), roughness: 0.3, clearcoat: 1 })));
+      const rc = new THREE.Mesh(new THREE.BoxGeometry(halfAt(W, sp.top, opt) * 2 - 0.12, 0.02, sp.roofLen), tag(new PhysMat({ color: lin(sp.roofColor), roughness: 0.3, clearcoat: 1 })));
       rc.position.set(0, sp.top + opt.round + 0.002, sp.roofZ || 0);
       root.add(rc);
     }
@@ -545,16 +551,16 @@
       case 'tuktuk': sp = SPEC.tuktuk(G.pick(['#b71c1c', '#1d4f9a', '#2e7d32', '#5e2a84'])); break;
       case 'microbus': {
         const mb = V.microbus({ dirt: G.pick([0.5, 1]) });
-        V.bake(mb.root);
-        return { root: mb.root, wheels: mb.wheels, len: 4.8, wid: 1.9, blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] };
+        V.bake(mb.root, null, true);
+        return { root: mb.root, wheels: [], len: 4.8, wid: 1.9, blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] };
       }
       default: sp = SPEC.sedan(G.pick(['#e9e9e6', '#1d1f22', '#8a8f95', '#b7babd', '#7a1c1c', '#1f3f6e', '#c9c1a8', '#3c4a3a']));
     }
     const v = V.car(sp);
     plateOn(v.root, sp.L, sp.bumperY + 0.02);
-    V.bake(v.root);
+    V.bake(v.root, null, true); // traffic wheels don't spin: everything in a few meshes
     return {
-      root: v.root, wheels: v.wheels, len: sp.L, wid: sp.W,
+      root: v.root, wheels: [], len: sp.L, wid: sp.W,
       blinkF: [sp.W / 2 - 0.1, sp.headY - 0.1, sp.L / 2 + 0.06], blinkR: [sp.W / 2 - 0.1, sp.tailY - 0.12, -sp.L / 2 - 0.06],
     };
   };

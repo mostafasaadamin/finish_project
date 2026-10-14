@@ -113,7 +113,7 @@
   };
 
   const tmpV = new THREE.Vector3();
-  const farD2 = () => (mobile() ? 60 : 90) ** 2;
+  const farD2 = () => (mobile() ? 45 : 90) ** 2;
 
   // drive the character for the given mode (same modes the box figures used)
   C.anim = function (p, mode, dt, speed) {

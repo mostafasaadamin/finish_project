@@ -154,6 +154,16 @@
     return null;
   };
 
+  // a sidewalk point between minD and maxD metres from pos (for keeping the streets around you busy)
+  W.sidewalkNear = function (pos, minD, maxD) {
+    for (let k = 0; k < 120; k++) {
+      const q = W.randomSidewalk(2);
+      const d = Math.hypot(q.x - pos.x, q.z - pos.z);
+      if (d > minD && d < maxD) return q;
+    }
+    return null;
+  };
+
   W.randomSidewalk = function (minEdge) {
     for (let k = 0; k < 60; k++) {
       const p = G.pick(W.paths);

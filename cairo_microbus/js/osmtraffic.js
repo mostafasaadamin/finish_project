@@ -72,14 +72,15 @@
     car.ex.set(at.p.x - at.tz * car.off, 0, at.p.z + at.tx * car.off);
   };
 
-  OT.spawn = function (car, anywhere) {
+  OT.spawn = function (car, anywhere, near) {
     const P = G.Player;
-    for (let k = 0; k < 40; k++) {
+    for (let k = 0; k < (near ? 120 : 40); k++) {
       let r = Math.random() * OT.totalLen, e = OT.edges[0];
       for (const x of OT.edges) { r -= x.len; if (r <= 0) { e = x; break; } }
       const dir = e.oneway ? 1 : G.chance(0.5) ? 1 : -1;
       OT.place(car, e, dir, G.rand(0, e.len));
       if (!anywhere && P && G.dist2(car.pos, P.pos) < 90) continue;
+      if (near && P && G.dist2(car.pos, P.pos) > 190) continue;
       if (G.Traffic.cars.some((o) => o !== car && o.pos && G.dist2(o.pos, car.pos) < 10)) continue;
       break;
     }
@@ -176,7 +177,8 @@
       car.stuck = car.speed < 0.2 ? car.stuck + dt : 0;
       const dP = P ? G.dist2(car.pos, P.pos) : 0;
       if (car.stuck > 20 && dP > 90) { car.stuck = 0; OT.spawn(car); }
-      car.mesh.visible = dP < 360;
+      else if (dP > (G.Main.isMobile ? 200 : 280) && G.chance(dt * 1.5)) OT.spawn(car, false, true); // bring traffic back around the player
+      car.mesh.visible = dP < (G.Main.isMobile ? 170 : 360);
       car.mesh.position.set(car.pos.x, 0, car.pos.z);
       car.mesh.rotation.y = car.heading;
     }

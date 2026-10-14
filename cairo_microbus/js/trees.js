@@ -87,24 +87,62 @@
     return T._palm;
   };
 
+  // ---------- spatial chunks: one InstancedMesh per ~120 m cell, culled by frustum + distance ----------
+  T.chunks = [];
+  // parts: [{ geo, mat }], items: [{ x, z, mats: [Matrix4 per part] }] -> sets item.ref = [{ mesh, i }] per part
+  T.chunked = function (scene, parts, items, shadow) {
+    const CELL = 120, cells = new Map();
+    items.forEach((it) => {
+      const k = Math.floor(it.x / CELL) + ',' + Math.floor(it.z / CELL);
+      if (!cells.has(k)) cells.set(k, []);
+      cells.get(k).push(it);
+    });
+    cells.forEach((list) => {
+      const c = new THREE.Vector3();
+      list.forEach((it) => { c.x += it.x; c.z += it.z; });
+      c.multiplyScalar(1 / list.length);
+      let r = 0;
+      list.forEach((it) => { r = Math.max(r, Math.hypot(it.x - c.x, it.z - c.z)); });
+      c.y = 5;
+      const meshes = parts.map((pt, pi) => {
+        const im = new THREE.InstancedMesh(pt.geo, pt.mat, list.length);
+        list.forEach((it, i) => {
+          im.setMatrixAt(i, it.mats[pi]);
+          (it.ref = it.ref || [])[pi] = { mesh: im, i };
+        });
+        im.frustumCulled = false; // whole chunk is culled below instead
+        im.castShadow = !!shadow;
+        im.receiveShadow = true;
+        scene.add(im);
+        return im;
+      });
+      T.chunks.push({ meshes, sphere: new THREE.Sphere(c, r + 22) });
+    });
+  };
+  const frustum = new THREE.Frustum(), pv = new THREE.Matrix4();
+  T.cull = function (cam) {
+    pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(pv);
+    const far = G.Main.isMobile ? 260 : 480;
+    T.chunks.forEach((ch) => {
+      const v = ch.sphere.center.distanceTo(cam.position) - ch.sphere.radius < far && frustum.intersectsSphere(ch.sphere);
+      ch.meshes.forEach((m) => (m.visible = v));
+    });
+  };
+
   T.plantPalms = function (scene, spots) {
     if (!spots.length) return;
     const P = T.palmParts();
-    const n = spots.length;
-    const trunkIM = new THREE.InstancedMesh(P.trunk, P.barkMat, n);
-    const crownIM = new THREE.InstancedMesh(P.frondGeo, P.frondMat, n);
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-    spots.forEach((p, i) => {
-      const h = G.rand(7, 11), rot = G.rand(0, 6.28), s = G.rand(0.9, 1.15);
+    const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    const items = spots.map((p) => {
+      const h = G.rand(7, 11), rot = G.rand(0, 6.28), sc = G.rand(0.9, 1.15);
       q.setFromAxisAngle(up, rot);
-      m.compose(new THREE.Vector3(p.x, p.y || 0, p.z), q, new THREE.Vector3(s, h, s));
-      trunkIM.setMatrixAt(i, m);
-      // crown on top of the (curved) trunk
-      const top = new THREE.Vector3(0.25 * s, h, 0).applyQuaternion(q);
-      m.compose(new THREE.Vector3(p.x + top.x, (p.y || 0) + h, p.z + top.z), q, new THREE.Vector3(s, s, s));
-      crownIM.setMatrixAt(i, m);
+      const m1 = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), q, new THREE.Vector3(sc, h, sc));
+      const top = new THREE.Vector3(0.25 * sc, h, 0).applyQuaternion(q);
+      const m2 = new THREE.Matrix4().compose(new THREE.Vector3(p.x + top.x, (p.y || 0) + h, p.z + top.z), q, new THREE.Vector3(sc, sc, sc));
+      return { x: p.x, z: p.z, mats: [m1, m2] };
     });
-    [trunkIM, crownIM].forEach((im) => { im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); });
+    T.chunked(scene, [{ geo: P.trunk, mat: P.barkMat }, { geo: P.frondGeo, mat: P.frondMat }], items, !G.Main.isMobile);
   };
 
   // place trees at the given spots (Vector3, y = ground height; .palm marks palm spots)
@@ -117,7 +155,7 @@
     const groups = T.models.map(() => []);
     spots.forEach((p, i) => groups[i % T.models.length].push(p));
     const mobile = G.Main && G.Main.isMobile;
-    T.nearMax = mobile ? 5 : 14;
+    T.nearMax = mobile ? 2 : 14;
     T.lod = [];
     T.models.forEach((m, k) => {
       const ps = groups[k];
@@ -128,14 +166,11 @@
         const mx = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), G.rand(0, 6.28)), new THREE.Vector3(s, s, s));
         return { x: p.x, z: p.z, mx, near: false };
       });
-      // far: crossed quads showing a picture of this very model
+      // far: crossed quads showing a picture of this very model (chunked + culled)
       const imp = T.impostor(m);
-      const far = new THREE.InstancedMesh(imp.geo, imp.mat, inst.length);
-      inst.forEach((t, i) => far.setMatrixAt(i, t.mx));
-      far.frustumCulled = false; // instances span the whole city
-      far.castShadow = true;
-      far.receiveShadow = true;
-      scene.add(far);
+      inst.forEach((t) => (t.mats = [t.mx]));
+      T.chunked(scene, [{ geo: imp.geo, mat: imp.mat }], inst, !G.Main.isMobile);
+      const far = null;
       // near: the full 3D model, only for the closest trees
       const near = m.meshes.map(({ g, mat }) => {
         const im = new THREE.InstancedMesh(g, mat, T.nearMax);
@@ -219,6 +254,7 @@
 
   // swap the closest trees to full models (called every frame, works every 0.4 s)
   T.update = function (pos, dt) {
+    if (G.Main.camera) T.cull(G.Main.camera);
     if (!T.lod || !T.lod.length) return;
     T._t = (T._t || 0) - dt;
     if (T._t > 0) return;
@@ -231,13 +267,12 @@
     all.sort((a, b) => a.d - b.d);
     const want = new Set(all.slice(0, T.nearMax).map((e) => e.k + ':' + e.i));
     T.lod.forEach((L, k) => {
-      let n = 0, dirty = false;
+      let n = 0;
       L.inst.forEach((t, i) => {
         const nearNow = want.has(k + ':' + i);
-        if (nearNow !== t.near) { t.near = nearNow; L.far.setMatrixAt(i, nearNow ? ZERO : t.mx); dirty = true; }
+        if (nearNow !== t.near) { t.near = nearNow; const r = t.ref[0]; r.mesh.setMatrixAt(r.i, nearNow ? ZERO : t.mx); r.mesh.instanceMatrix.needsUpdate = true; }
         if (nearNow && n < T.nearMax) { L.near.forEach((im) => im.setMatrixAt(n, t.mx)); n++; }
       });
-      if (dirty) L.far.instanceMatrix.needsUpdate = true;
       L.near.forEach((im) => { im.count = n; im.instanceMatrix.needsUpdate = true; });
     });
   };

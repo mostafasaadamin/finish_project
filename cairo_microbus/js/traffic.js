@@ -23,9 +23,9 @@
     }
   };
 
-  T.spawn = function (car, anywhere) {
+  T.spawn = function (car, anywhere, near) {
     const C = G.City, R = C.R, NR = C.NR;
-    for (let tries = 0; tries < 30; tries++) {
+    for (let tries = 0; tries < (near ? 120 : 30); tries++) {
       car.axis = G.chance(0.5) ? 'x' : 'z';
       car.road = G.randi(0, NR - 1);
       car.dir = G.chance(0.5) ? 1 : -1;
@@ -36,6 +36,7 @@
       C.lanePos(car.axis, R[car.road], car.dir, car.lane, along, car.pos);
       // don't pop in right in front of the player
       if (!anywhere && G.Player && G.dist2(car.pos, G.Player.pos) < 120) continue;
+      if (near && G.Player && G.dist2(car.pos, G.Player.pos) > 200) continue;
       if (T.cars.some((o) => o !== car && G.dist2(o.pos, car.pos) < 12)) continue;
       break;
     }
@@ -151,11 +152,12 @@
       car.stuck = car.speed < 0.2 ? car.stuck + dt : 0;
       const dP = P ? G.dist2(car.pos, P.pos) : 0;
       if (car.stuck > 20 && dP > 90) { car.stuck = 0; T.spawn(car); }
+      else if (dP > (G.Main.isMobile ? 200 : 280) && G.chance(dt * 1.5)) T.spawn(car, false, true); // bring traffic back around the player
 
       const on = car.signal && Math.floor(performance.now() / 400) % 2 === 0;
       car.blink.L.forEach((m) => (m.visible = on && car.signal < 0));
       car.blink.R.forEach((m) => (m.visible = on && car.signal > 0));
-      car.mesh.visible = dP < 360;
+      car.mesh.visible = dP < (G.Main.isMobile ? 170 : 360);
       car.mesh.position.set(car.pos.x, 0, car.pos.z);
       car.mesh.rotation.y = car.heading;
     }

@@ -5,12 +5,12 @@
 
   function setupRenderer() {
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !isMobile; // phones: no shadow pass (halves the GPU work)
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('game').appendChild(renderer.domElement);
     Main.renderer = renderer;
@@ -22,12 +22,12 @@
     sx.fillStyle = gr; sx.fillRect(0, 0, 4, 256);
     scene.background = G.tex(sky);
     // Cairo haze
-    scene.fog = new THREE.Fog(new THREE.Color('#d8cdb4').convertSRGBToLinear(), 80, 560);
+    scene.fog = new THREE.Fog(new THREE.Color('#d8cdb4').convertSRGBToLinear(), isMobile ? 60 : 80, isMobile ? 330 : 560);
 
     Main.hemi = new THREE.HemisphereLight(new THREE.Color('#dbe8f5').convertSRGBToLinear(), new THREE.Color('#9c8a6a').convertSRGBToLinear(), 0.9);
     scene.add(Main.hemi);
     const sun = (Main.sun = new THREE.DirectionalLight(new THREE.Color('#fff1d6').convertSRGBToLinear(), 2.6));
-    sun.castShadow = true;
+    sun.castShadow = !isMobile;
     const sz = isMobile ? 1024 : 2048;
     sun.shadow.mapSize.set(sz, sz);
     const sc = sun.shadow.camera;
@@ -35,7 +35,7 @@
     sun.shadow.bias = -0.0006;
     scene.add(sun, sun.target);
 
-    Main.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, 3000);
+    Main.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, isMobile ? 380 : 3000);
     window.addEventListener('resize', () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       Main.camera.aspect = window.innerWidth / window.innerHeight;
@@ -193,7 +193,7 @@
     await new Promise((r) => setTimeout(r, 30));
     G.Models.buildTextures();
     G.World.build(Main.scene);
-    G.Traffic.init(Main.scene, isMobile ? 26 : 38);
+    G.Traffic.init(Main.scene, isMobile ? 22 : 38);
     G.People.init(Main.scene);
     G.Player.init(Main.scene);
     linearizeMaterials(Main.scene);

@@ -407,6 +407,7 @@
       const SPEED = { microbus: 15, taxi: 15, tuktuk: 9, bus: 11, pickup: 13, police: 15 };
       // the player's microbus keeps separate parts; traffic bodies are baked into a few meshes
       const vb = opts && opts.player ? Object.assign(G.Vehicles.microbus(), { blinkF: [0.82, 0.74, 2.53], blinkR: [0.83, 0.71, -2.53] }) : G.Vehicles.make(type);
+      if (opts && opts.player) G.Vehicles.bake(vb.root); // body merged, wheels stay separate to spin
       const group = new THREE.Group();
       group.add(vb.root);
       if (!Mat.blink) Mat.blink = new THREE.MeshBasicMaterial({ color: 0xffa000 });
