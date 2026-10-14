@@ -1,0 +1,62 @@
+name: Fetch Sketchfab model
+
+# Downloads a Sketchfab model (id in cairo_microbus/tools/sketchfab_request.txt) as glTF,
+# packs it into a single .glb and commits it to cairo_microbus/assets/vehicles/.
+# Needs the repository secret SKETCHFAB_TOKEN (Sketchfab > Settings > Password & API > API token).
+on:
+  push:
+    paths:
+      - 'cairo_microbus/tools/sketchfab_request.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Download and convert
+        env:
+          SKETCHFAB_TOKEN: ${{ secrets.SKETCHFAB_TOKEN }}
+        run: |
+          set -e
+          read -r UID NAME < cairo_microbus/tools/sketchfab_request.txt
+          mkdir -p cairo_microbus/assets/vehicles /tmp/sf
+          curl -s "https://api.sketchfab.com/v3/models/$UID" > /tmp/sf/meta.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open('/tmp/sf/meta.json'))
+          lic = d.get('license') or {}
+          print('NAME', d.get('name'))
+          print('AUTHOR', (d.get('user') or {}).get('displayName'), (d.get('user') or {}).get('profileUrl'))
+          print('LICENSE', lic.get('label'), lic.get('slug'))
+          print('DOWNLOADABLE', d.get('isDownloadable'))
+          print('FACES', d.get('faceCount'), 'VERTS', d.get('vertexCount'))
+          json.dump({'name': d.get('name'), 'author': (d.get('user') or {}).get('displayName'), 'url': d.get('viewerUrl'),
+                     'license': lic.get('label'), 'downloadable': d.get('isDownloadable')}, open('/tmp/sf/info.json', 'w'), ensure_ascii=False)
+          PY
+          if [ -z "$SKETCHFAB_TOKEN" ]; then echo "NO_TOKEN: add the SKETCHFAB_TOKEN secret to download"; exit 0; fi
+          curl -s -H "Authorization: Token $SKETCHFAB_TOKEN" "https://api.sketchfab.com/v3/models/$UID/download" > /tmp/sf/dl.json
+          URL=$(python3 -c "import json;d=json.load(open('/tmp/sf/dl.json'));print((d.get('gltf') or {}).get('url',''))")
+          if [ -z "$URL" ]; then cat /tmp/sf/dl.json; exit 1; fi
+          curl -sL "$URL" -o /tmp/sf/model.zip
+          cd /tmp/sf && unzip -q -o model.zip -d m && ls -R m | head -40
+          GLTF=$(find m -name '*.gltf' | head -1)
+          npx -y @gltf-transform/cli@4.1.1 copy "$GLTF" raw.glb
+          npx -y @gltf-transform/cli@4.1.1 resize raw.glb small.glb --width 2048 --height 2048
+          npx -y @gltf-transform/cli@4.1.1 inspect small.glb | head -60
+          cd -
+          cp /tmp/sf/small.glb "cairo_microbus/assets/vehicles/$NAME.glb"
+          cp /tmp/sf/info.json "cairo_microbus/assets/vehicles/$NAME.json"
+          ls -la cairo_microbus/assets/vehicles
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cairo_microbus/assets/vehicles
+          git commit -qm "Add Sketchfab model $NAME [skip ci]"
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 10; done
