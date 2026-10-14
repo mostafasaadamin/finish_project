@@ -104,7 +104,7 @@
       m.compose(new THREE.Vector3(p.x + top.x, (p.y || 0) + h, p.z + top.z), q, new THREE.Vector3(s, s, s));
       crownIM.setMatrixAt(i, m);
     });
-    [trunkIM, crownIM].forEach((im) => { im.castShadow = true; im.receiveShadow = true; scene.add(im); });
+    [trunkIM, crownIM].forEach((im) => { im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; scene.add(im); });
   };
 
   // place trees at the given spots (Vector3, y = ground height; .palm marks palm spots)
@@ -116,22 +116,124 @@
     if (!T.models.length) { T.procedural(scene, spots); return; }
     const groups = T.models.map(() => []);
     spots.forEach((p, i) => groups[i % T.models.length].push(p));
+    const mobile = G.Main && G.Main.isMobile;
+    T.nearMax = mobile ? 8 : 24;
+    T.lod = [];
     T.models.forEach((m, k) => {
       const ps = groups[k];
       if (!ps.length) return;
-      const target = m.palm ? G.rand(7, 9) : G.rand(6, 9);
-      const base = target / Math.max(0.5, m.height);
-      const mats = ps.map((p) => {
-        const s = base * G.rand(0.8, 1.2);
-        return new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), G.rand(0, 6.28)), new THREE.Vector3(s, s, s));
+      const base = 1 / Math.max(0.5, m.height);
+      const inst = ps.map((p) => {
+        const s = base * G.rand(6, 9.5);
+        const mx = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), G.rand(0, 6.28)), new THREE.Vector3(s, s, s));
+        return { x: p.x, z: p.z, mx, near: false };
       });
-      m.meshes.forEach(({ g, mat }) => {
-        const im = new THREE.InstancedMesh(g, mat, ps.length);
-        mats.forEach((mx, i) => im.setMatrixAt(i, mx));
+      // far: crossed quads showing a picture of this very model
+      const imp = T.impostor(m);
+      const far = new THREE.InstancedMesh(imp.geo, imp.mat, inst.length);
+      inst.forEach((t, i) => far.setMatrixAt(i, t.mx));
+      far.frustumCulled = false; // instances span the whole city
+      far.castShadow = true;
+      far.receiveShadow = true;
+      scene.add(far);
+      // near: the full 3D model, only for the closest trees
+      const near = m.meshes.map(({ g, mat }) => {
+        const im = new THREE.InstancedMesh(g, mat, T.nearMax);
+        im.count = 0;
         im.castShadow = true;
         im.receiveShadow = true;
+        im.frustumCulled = false;
         scene.add(im);
+        return im;
       });
+      T.lod.push({ inst, far, near });
+    });
+  };
+
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+
+  // render the model from the side into a transparent texture (unlit albedo, lit later in the scene)
+  T.impostor = function (m) {
+    const R = G.Main.renderer;
+    const box = new THREE.Box3();
+    const scene = new THREE.Scene();
+    m.meshes.forEach(({ g, mat }) => {
+      g.computeBoundingBox();
+      box.union(g.boundingBox);
+      const b = new THREE.MeshBasicMaterial({ map: mat.map || null, color: mat.color ? mat.color.clone() : 0xffffff, alphaTest: 0.5, side: THREE.DoubleSide });
+      scene.add(new THREE.Mesh(g, b));
+    });
+    const size = box.getSize(new THREE.Vector3());
+    const w = Math.max(size.x, size.z) * 1.02, h = size.y * 1.02;
+    const res = G.Main.isMobile ? 256 : 512;
+    const rt = new THREE.WebGLRenderTarget(res, res, { format: THREE.RGBAFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter });
+    // two views (front + side) side by side in one texture
+    const cam = new THREE.OrthographicCamera(-w / 2, w / 2, h, 0, -100, 100);
+    const old = { c: R.getClearColor(new THREE.Color()), a: R.getClearAlpha(), rt: R.getRenderTarget(), tm: R.toneMapping, sm: R.shadowMap.autoUpdate };
+    R.setRenderTarget(rt);
+    R.toneMapping = THREE.NoToneMapping;
+    R.setClearColor(0x3b5a2a, 0); // leafy colour so mip edges don't go black
+    R.clear();
+    [0, Math.PI / 2].forEach((ang, i) => {
+      R.setViewport(i * res / 2, 0, res / 2, res);
+      R.setScissor(i * res / 2, 0, res / 2, res);
+      R.setScissorTest(true);
+      cam.position.set(Math.sin(ang) * 50, 0, Math.cos(ang) * 50);
+      cam.lookAt(0, 0, 0);
+      R.render(scene, cam);
+    });
+    R.setScissorTest(false);
+    R.setRenderTarget(old.rt);
+    R.setViewport(0, 0, R.domElement.width / R.getPixelRatio(), R.domElement.height / R.getPixelRatio());
+    R.setClearColor(old.c, old.a);
+    R.toneMapping = old.tm;
+    scene.traverse((o) => o.material && o.material.dispose());
+    const tex = rt.texture;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+    mat.userData.linear = true;
+    // crossed quads; front uses the left half of the texture, side the right half
+    const quads = [0, 1].map((i) => {
+      const g = new THREE.PlaneGeometry(w, h);
+      g.translate(0, h / 2 + box.min.y, 0);
+      const uv = g.attributes.uv;
+      for (let j = 0; j < uv.count; j++) uv.setX(j, uv.getX(j) * 0.5 + i * 0.5);
+      if (i) g.rotateY(Math.PI / 2);
+      // round normals so the flat cards shade like a crown
+      const n = g.attributes.normal, p = g.attributes.position;
+      for (let j = 0; j < n.count; j++) {
+        const v = new THREE.Vector3(p.getX(j), (p.getY(j) - h * 0.5) * 0.6, p.getZ(j)).normalize();
+        v.y += 0.6;
+        v.normalize();
+        n.setXYZ(j, v.x, v.y, v.z);
+      }
+      return g;
+    });
+    const geo = G.merge(quads.map((g) => { if (g.attributes.color) g.deleteAttribute('color'); return g; }));
+    return { geo, mat };
+  };
+
+  // swap the closest trees to full models (called every frame, works every 0.4 s)
+  T.update = function (pos, dt) {
+    if (!T.lod || !T.lod.length) return;
+    T._t = (T._t || 0) - dt;
+    if (T._t > 0) return;
+    T._t = 0.4;
+    const all = [];
+    T.lod.forEach((L, k) => L.inst.forEach((t, i) => {
+      const d = (t.x - pos.x) ** 2 + (t.z - pos.z) ** 2;
+      if (d < 90 * 90) all.push({ k, i, d });
+    }));
+    all.sort((a, b) => a.d - b.d);
+    const want = new Set(all.slice(0, T.nearMax).map((e) => e.k + ':' + e.i));
+    T.lod.forEach((L, k) => {
+      let n = 0, dirty = false;
+      L.inst.forEach((t, i) => {
+        const nearNow = want.has(k + ':' + i);
+        if (nearNow !== t.near) { t.near = nearNow; L.far.setMatrixAt(i, nearNow ? ZERO : t.mx); dirty = true; }
+        if (nearNow && n < T.nearMax) { L.near.forEach((im) => im.setMatrixAt(n, t.mx)); n++; }
+      });
+      if (dirty) L.far.instanceMatrix.needsUpdate = true;
+      L.near.forEach((im) => { im.count = n; im.instanceMatrix.needsUpdate = true; });
     });
   };
 

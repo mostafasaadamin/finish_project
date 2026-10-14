@@ -166,6 +166,7 @@
     if (G.World.osm && G.City.water) G.City.water.visible = false;
     G.Tex.water.offset.x = Main.t * 0.01;
     G.Tex.water.offset.y = Main.t * 0.004;
+    G.Trees.update(Main.camera.position, dt);
     G.HUD.update();
     Main.renderer.render(Main.scene, Main.camera);
     if (!G.Foot.active) G.Gearbox.renderLever(dt, Main.t);
