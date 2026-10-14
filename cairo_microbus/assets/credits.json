@@ -2263,5 +2263,167 @@
    "url": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky"
   }
  ],
- "models": []
+ "models": [
+  {
+   "id": "jacaranda_tree",
+   "file": "models/jacaranda_tree.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/jacaranda_tree",
+   "categories": [
+    "nature",
+    "plants",
+    "trees",
+    "collection: verdant_trail"
+   ],
+   "tags": [
+    "tree",
+    "natural",
+    "nature",
+    "green",
+    "plant",
+    "outdoor",
+    "leaf",
+    "botany",
+    "leaves",
+    "forest",
+    "jungle",
+    "foliage",
+    "geometry nodes",
+    "bark",
+    "trunk",
+    "jacaranda"
+   ]
+  },
+  {
+   "id": "tree_small_02",
+   "file": "models/tree_small_02.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/tree_small_02",
+   "categories": [
+    "nature",
+    "plants",
+    "trees",
+    "collection: verdant_trail"
+   ],
+   "tags": [
+    "tree",
+    "natural",
+    "nature",
+    "plant",
+    "outdoor",
+    "green",
+    "botany",
+    "leaf",
+    "leaves",
+    "forest",
+    "jungle",
+    "foliage",
+    "geometry nodes",
+    "trunk",
+    "bark",
+    "medium",
+    "garden",
+    "branches",
+    "burkea africana",
+    "wild syringa",
+    "small"
+   ]
+  },
+  {
+   "id": "island_tree_01",
+   "file": "models/island_tree_01.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/island_tree_01",
+   "categories": [
+    "nature",
+    "plants",
+    "trees",
+    "collection: verdant_trail"
+   ],
+   "tags": [
+    "tree",
+    "natural",
+    "nature",
+    "green",
+    "plant",
+    "outdoor",
+    "leaf",
+    "botany",
+    "leaves",
+    "forest",
+    "bush",
+    "jungle",
+    "foliage",
+    "island",
+    "coastal",
+    "geometry nodes",
+    "trunk",
+    "bark"
+   ]
+  },
+  {
+   "id": "island_tree_02",
+   "file": "models/island_tree_02.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/island_tree_02",
+   "categories": [
+    "nature",
+    "plants",
+    "trees"
+   ],
+   "tags": [
+    "tree",
+    "natural",
+    "nature",
+    "green",
+    "plant",
+    "outdoor",
+    "leaf",
+    "botany",
+    "leaves",
+    "forest",
+    "bush",
+    "jungle",
+    "foliage",
+    "small",
+    "geometry nodes",
+    "trunk",
+    "bark",
+    "island",
+    "coastal"
+   ]
+  },
+  {
+   "id": "island_tree_03",
+   "file": "models/island_tree_03.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/island_tree_03",
+   "categories": [
+    "nature",
+    "plants",
+    "trees"
+   ],
+   "tags": [
+    "tree",
+    "natural",
+    "nature",
+    "green",
+    "plant",
+    "outdoor",
+    "leaf",
+    "botany",
+    "leaves",
+    "forest",
+    "bush",
+    "jungle",
+    "foliage",
+    "small",
+    "geometry nodes",
+    "trunk",
+    "bark",
+    "island",
+    "coastal"
+   ]
+  }
+ ]
 }
