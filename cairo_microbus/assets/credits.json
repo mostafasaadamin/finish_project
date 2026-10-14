@@ -2275,5 +2275,116 @@
    "url": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky"
   }
  ],
- "models": []
+ "models": [
+  {
+   "id": "street_rat",
+   "file": "models/street_rat.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/street_rat",
+   "categories": [
+    "nature",
+    "creature",
+    "collection: hidden_alley"
+   ],
+   "tags": [
+    "rat",
+    "mouse",
+    "animal",
+    "vermin",
+    "rodent",
+    "alleyway",
+    "pest",
+    "feral"
+   ]
+  },
+  {
+   "id": "dead_tree_trunk_02",
+   "file": "models/dead_tree_trunk_02.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/dead_tree_trunk_02",
+   "categories": [
+    "nature",
+    "plants",
+    "trees",
+    "collection: verdant_trail"
+   ],
+   "tags": [
+    "trunk",
+    "log",
+    "tree trunk",
+    "dead",
+    "decayed",
+    "dry",
+    "rough texture",
+    "forest floor",
+    "stump",
+    "bark",
+    "woodland",
+    "debris",
+    "environment",
+    "ground cover"
+   ]
+  },
+  {
+   "id": "street_lamp_01",
+   "file": "models/street_lamp_01.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/street_lamp_01",
+   "categories": [
+    "lighting",
+    "industrial",
+    "collection: hidden_alley"
+   ],
+   "tags": [
+    "street",
+    "road",
+    "light",
+    "lamppost",
+    "outdoor",
+    "pole",
+    "sidewalk",
+    "night",
+    " urban",
+    "city"
+   ]
+  },
+  {
+   "id": "tree_stump_01",
+   "file": "models/tree_stump_01.glb",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/tree_stump_01",
+   "categories": [
+    "nature",
+    "plants",
+    "ground cover",
+    "trees",
+    "collection: pine_forest"
+   ],
+   "tags": [
+    "tree",
+    "trunk",
+    "stump",
+    "dead tree",
+    "bark",
+    "forest",
+    "natural",
+    "nature",
+    "woodland",
+    "foliage",
+    "environment",
+    "forest floor",
+    "leaf",
+    "dead",
+    "roots",
+    "decayed",
+    "log",
+    "dry",
+    "mossy",
+    "debris",
+    "ground cover",
+    "moss",
+    "rough texture"
+   ]
+  }
+ ]
 }
