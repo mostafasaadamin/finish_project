@@ -365,7 +365,7 @@
         const hw = 6, hd = 6, poly = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([u, v]) => new THREE.Vector3(cx + dx * u - dz * v, 0, cz + dz * u + dx * v));
         if (poly.some((p) => W.inBuilding(p.x, p.z) || (W.nearestRoad(p.x, p.z, SW + 4) || { e: 99 }).e < SW + 1)) continue;
         if (area(poly) > 0) poly.reverse();
-        const b = { poly, h: G.randi(5, 9) * 3.2 + 1, levels: 0, name: '', kind: 'filler' };
+        const b = { poly, h: G.randi(G.SIMPLE ? 3 : 5, G.SIMPLE ? 6 : 9) * 3.2 + 1, levels: 0, name: '', kind: 'filler' };
         let minX = 1e9, minZ = 1e9, maxX = -1e9, maxZ = -1e9;
         poly.forEach((p) => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); });
         b.box = { minX, minZ, maxX, maxZ };

@@ -3,15 +3,19 @@
   const Main = (G.Main = { started: false, paused: false, camMode: 0, t: 0 });
   const isMobile = (Main.isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || 'ontouchstart' in window);
 
+  // graphics quality: high = sun shadows (also on phones, lighter); low = no shadows
+  Main.hq = true;
+  try { Main.hq = localStorage.getItem('cm_hq') !== '0'; } catch (e) { /* storage unavailable */ }
+
   function setupRenderer() {
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = !isMobile; // phones: no shadow pass (halves the GPU work)
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMappingExposure = 0.88;
+    renderer.shadowMap.enabled = Main.hq;
+    renderer.shadowMap.type = isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     document.getElementById('game').appendChild(renderer.domElement);
     Main.renderer = renderer;
 
@@ -22,16 +26,17 @@
     sx.fillStyle = gr; sx.fillRect(0, 0, 4, 256);
     scene.background = G.tex(sky);
     // Cairo haze
-    scene.fog = new THREE.Fog(new THREE.Color('#d8cdb4').convertSRGBToLinear(), isMobile ? 60 : 80, isMobile ? 330 : 560);
+    scene.fog = new THREE.Fog(new THREE.Color('#d9c9a8').convertSRGBToLinear(), isMobile ? 50 : 70, isMobile ? 320 : 480); // dusty Cairo haze
 
     Main.hemi = new THREE.HemisphereLight(new THREE.Color('#dbe8f5').convertSRGBToLinear(), new THREE.Color('#9c8a6a').convertSRGBToLinear(), 0.9);
     scene.add(Main.hemi);
-    const sun = (Main.sun = new THREE.DirectionalLight(new THREE.Color('#fff1d6').convertSRGBToLinear(), 2.6));
-    sun.castShadow = !isMobile;
+    const sun = (Main.sun = new THREE.DirectionalLight(new THREE.Color('#ffe2b8').convertSRGBToLinear(), 3.1));
+    sun.castShadow = Main.hq;
     const sz = isMobile ? 1024 : 2048;
     sun.shadow.mapSize.set(sz, sz);
     const sc = sun.shadow.camera;
-    sc.left = -75; sc.right = 75; sc.top = 75; sc.bottom = -75; sc.near = 1; sc.far = 260;
+    const ext = isMobile ? 45 : 75;
+    sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext; sc.near = 1; sc.far = 260;
     sun.shadow.bias = -0.0006;
     scene.add(sun, sun.target);
 
@@ -54,7 +59,7 @@
         Main.scene.environment = env;
         hdr.mapping = THREE.EquirectangularReflectionMapping;
         Main.scene.background = hdr;
-        Main.hemi.intensity = 0.35;
+        Main.hemi.intensity = 0.25;
         pm.dispose();
         res(true);
       }, undefined, () => res(false));
@@ -158,7 +163,7 @@
     if (Math.floor(Main.t * 4) !== Math.floor((Main.t - dt) * 4)) updateAmbience();
     // sun + shadows follow the microbus
     const p = G.Player.pos;
-    Main.sun.position.set(p.x + 60, 110, p.z + 35);
+    Main.sun.position.set(p.x + 95, 70, p.z + 60); // low afternoon sun: long shadows
     Main.sun.target.position.set(p.x, 0, p.z);
     // police lights & the Nile
     const blink = Math.floor(Main.t * 6) % 2;

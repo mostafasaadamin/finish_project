@@ -497,7 +497,7 @@
   Cb.updateAll = function (dt) {
     F.update(dt);
     Cb.update(dt);
-    Cb.updateCrew(dt);
+    if (!G.SIMPLE) Cb.updateCrew(dt);
     Cb.updateWanted(dt);
   };
 

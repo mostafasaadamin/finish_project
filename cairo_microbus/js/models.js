@@ -119,7 +119,7 @@
     Tex.water = G.tex(c, true);
 
     Tex.facades = [
-      ['#d8c3a0', '#8a6d48'], ['#c9a77c', '#6e5235'], ['#e2cfb0', '#7d6a55'], ['#b9a48a', '#4f4a44'], ['#d6b796', '#8b4f37'], ['#cdb08e', '#5d4a3a'],
+      ['#c8b08a', '#6b5843'], ['#b8986e', '#5e4a36'], ['#cdb894', '#6d6050'], ['#a99579', '#4f4a44'], ['#c2a07c', '#6e4a36'], ['#bda283', '#574738'],
     ].map(([b, a], i) => G.tex(M.facadeCanvas(b, a, i), true));
     // plaster surface detail shared by all facades (window cells stay roughly flat)
     Tex.facadeN = dataTex(photoCanvas(512, 512, 'plaster', 'NormalGL', 128), true);
@@ -132,9 +132,9 @@
     const nScale = (v) => new THREE.Vector2(v, v);
     Mat.vc = std({ vertexColors: true, roughness: 0.85 });
     Mat.car = std({ vertexColors: true, roughness: 0.32, metalness: 0.35, envMapIntensity: 1.2 });
-    Mat.road = std({ map: Tex.road, normalMap: Tex.roadN, roughnessMap: Tex.roadR, normalScale: nScale(0.8) });
-    Mat.asphalt = std({ map: Tex.asphalt, normalMap: Tex.asphaltN, roughnessMap: Tex.asphaltR, normalScale: nScale(0.8) });
-    Mat.paving = std({ map: Tex.paving, normalMap: Tex.pavingN, roughness: 0.85 });
+    Mat.road = std({ map: Tex.road, normalMap: Tex.roadN, roughnessMap: Tex.roadR, normalScale: nScale(0.8), color: 0xcfcfcf });
+    Mat.asphalt = std({ map: Tex.asphalt, normalMap: Tex.asphaltN, roughnessMap: Tex.asphaltR, normalScale: nScale(0.8), color: 0xcfcfcf });
+    Mat.paving = std({ map: Tex.paving, normalMap: Tex.pavingN, roughness: 0.85, color: 0xd8cfc0 }); // dusty, not glaring
     Mat.curb = std({ map: Tex.curb, roughness: 0.8 });
     Mat.roof = std({ map: Tex.roof, roughness: 0.95 });
     Mat.sand = std({ map: Tex.sand, roughness: 1 });
@@ -170,7 +170,7 @@
       G.noise(x, 512, 512, 7000, 0.06);
     }
     for (let i = 0; i < 30; i++) { x.fillStyle = 'rgba(70,50,30,0.06)'; x.fillRect(G.rand(0, 512), G.rand(0, 512), G.rand(2, 10), G.rand(30, 220)); }
-    const shutters = ['#6b4a2b', '#3f5a3a', '#7a6a50', '#5d4037', '#4b6a6e'];
+    const shutters = ['#6b5a45', '#5a5246', '#7a6a50', '#5d4a3a', '#57534c'];
     const clothes = ['#e53935', '#1e88e5', '#fdd835', '#ffffff', '#43a047', '#8e24aa', '#ff7043'];
     for (let f = 0; f < 4; f++) {
       for (let col = 0; col < 4; col++) {
@@ -203,12 +203,12 @@
           x.fillStyle = '#2b2b2b';
           x.fillRect(X + 16, Yy + 84, 96, 3);
           for (let k = X + 18; k < X + 112; k += 7) x.fillRect(k, Yy + 84, 2, 28);
-          if (Math.random() < 0.55) {
+          if (!G.SIMPLE && Math.random() < 0.55) {
             x.strokeStyle = '#333'; x.lineWidth = 1;
             x.beginPath(); x.moveTo(X + 16, Yy + 66); x.lineTo(X + 112, Yy + 66); x.stroke();
             for (let k = X + 20; k < X + 104; k += G.rand(12, 20)) { x.fillStyle = G.pick(clothes); x.fillRect(k, Yy + 66, G.rand(8, 14), G.rand(12, 22)); }
           }
-          if (Math.random() < 0.3) { x.fillStyle = '#4caf50'; x.beginPath(); x.arc(X + 104, Yy + 78, 8, 0, 7); x.fill(); }
+          if (!G.SIMPLE && Math.random() < 0.3) { x.fillStyle = '#4caf50'; x.beginPath(); x.arc(X + 104, Yy + 78, 8, 0, 7); x.fill(); }
         }
         if (Math.random() < 0.3) {
           x.fillStyle = '#e6e1d3'; x.fillRect(X + 101, Yy + 44, 24, 18);
@@ -229,16 +229,17 @@
       const X = (i % 4) * 256, Yy = Math.floor(i / 4) * 256;
       x.fillStyle = '#cbb89a'; x.fillRect(X, Yy, 256, 256);
       x.fillStyle = color; x.fillRect(X + 4, Yy + 6, 248, 70);
+      if (G.SIMPLE) { x.fillStyle = 'rgba(120,100,70,0.45)'; x.fillRect(X + 4, Yy + 6, 248, 70); } // sun-faded
       x.strokeStyle = '#fff'; x.lineWidth = 3; x.strokeRect(X + 8, Yy + 10, 240, 62);
       G.arText(x, name, X + 128, Yy + 42, 34, '#fff', 900);
-      if (Math.random() < 0.45 && i !== 0 && i !== 4) {
+      if (Math.random() < (G.SIMPLE ? 0.7 : 0.45) && i !== 0 && i !== 4) {
         x.fillStyle = '#8f9396'; x.fillRect(X + 14, Yy + 86, 228, 170);
         x.fillStyle = 'rgba(0,0,0,0.25)'; for (let k = Yy + 90; k < Yy + 256; k += 7) x.fillRect(X + 14, k, 228, 2);
       } else {
         x.fillStyle = '#2c2520'; x.fillRect(X + 14, Yy + 86, 228, 170);
         for (let s = 0; s < 3; s++) {
           x.fillStyle = '#5d4a3a'; x.fillRect(X + 18, Yy + 110 + s * 45, 220, 5);
-          for (let k = 0; k < 14; k++) { x.fillStyle = `hsl(${Math.random() * 360},60%,55%)`; x.fillRect(X + 22 + k * 15, Yy + 92 + s * 45, 11, 18); }
+          for (let k = 0; k < 14; k++) { x.fillStyle = `hsl(${30 + Math.random() * 30},${G.SIMPLE ? 12 : 60}%,${G.SIMPLE ? 30 + Math.random() * 15 : 55}%)`; x.fillRect(X + 22 + k * 15, Yy + 92 + s * 45, 11, 18); }
         }
         x.fillStyle = '#f5e7b8'; x.fillRect(X + 110, Yy + 150, 40, 106);
       }

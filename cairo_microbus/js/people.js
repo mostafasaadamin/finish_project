@@ -9,7 +9,7 @@
     P.scene = scene;
     const Wd = G.World;
     // walkers on the sidewalks
-    for (let k = 0; k < 44; k++) {
+    for (let k = 0; k < (G.SIMPLE ? 0 : 44); k++) {
       const q = Wd.randomSidewalk(2);
       const w = { obj: M().person(), path: q.path, s: q.s, mode: 'walk', speed: G.rand(1.1, 1.7), dir: G.chance(0.5) ? 1 : -1, yellT: 0 };
       if (w.obj.userData.kind === 'kid') w.speed *= 1.2;
@@ -24,7 +24,7 @@
     });
     // vendors on random sidewalks, away from stops
     let vi = 0;
-    for (let tries = 0; P.vendors.length < 14 && tries < 300; tries++) {
+    for (let tries = 0; !G.SIMPLE && P.vendors.length < 14 && tries < 300; tries++) {
       const rp = Wd.randomSidewalk(10);
       const pos = new THREE.Vector3(rp.x + rp.nx * 0.9, 0, rp.z + rp.nz * 0.9);
       pos.y = Wd.groundY(pos.x, pos.z);
@@ -48,7 +48,7 @@
       P.vendors.push({ def, pos, obj, person, cool: G.rand(2, 8), waveT: 0 });
     }
     // سايس near a few shops
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < (G.SIMPLE ? 0 : 4); k++) {
       const rp = Wd.randomSidewalk(4);
       const person = M().person('galabeya', { robe: '#5d4037' });
       person.position.set(rp.x + rp.nx * 1.2, 0, rp.z + rp.nz * 1.2);
@@ -58,7 +58,7 @@
       P.vendors.push({ def: { type: 'سايس', lines: G.SAYES_LINES, sayes: true }, pos: person.position, obj: person, person, cool: G.rand(5, 15), waveT: 0 });
     }
     // coffee shops: seated customers + a waiter
-    Wd.AHWA.forEach((a) => {
+    (G.SIMPLE ? [] : Wd.AHWA).forEach((a) => {
       const group = [];
       for (let k = 0; k < 5; k++) {
         const per = M().person(G.pick(['man', 'galabeya', 'man']));
@@ -235,7 +235,7 @@
 
     for (const o of P.officers) M().animPerson(o, 'idle', dt);
 
-    P.updateFight(dt);
+    if (!G.SIMPLE) P.updateFight(dt);
   };
 
   // ---------- street fights ----------

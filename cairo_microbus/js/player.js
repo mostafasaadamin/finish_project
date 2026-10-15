@@ -204,7 +204,9 @@
     Pl.shake = G.clamp(impact / 10, 0.3, 1);
     const dmg = Math.round(G.clamp(impact * 6, 10, 120));
     E.addMoney(-dmg, 'تصليح');
-    if (car && impact > 6 && G.chance(0.6) && !G.Foot.active) {
+    if (G.SIMPLE) {
+      // just the bang and the repair bill
+    } else if (car && impact > 6 && G.chance(0.6) && !G.Foot.active) {
       G.Combat.angryDriver(car);
     } else if (car && E.ready('otherDriver', 9)) {
       G.Voice.conversation(G.pick(G.TALK.otherDriver), { driver: null, otherDriver: car.mesh }, 2);
@@ -214,17 +216,19 @@
   };
 
   E.reckless = function () {
-    if (!Pl.passengers.length || !E.ready('reckless', 22)) return;
+    if (!Pl.passengers.length || !E.ready('reckless', G.SIMPLE ? 60 : 22)) return;
     E.recklessCount = (E.recklessCount || 0) + 1;
     G.Voice.conversation(G.pick(G.TALK.reckless), busAnchors(), 2, null, () => { if (E.recklessCount >= 2 && G.chance(0.5)) E.makeAngry(); });
   };
 
   E.blockedYell = function (car) {
+    if (G.SIMPLE) return;
     if (!E.ready('blocked', 14)) return;
     G.Voice.say('otherDriver', G.pick(G.TALK.blocked), car.mesh, 1);
   };
 
   E.pedestrianYell = function (obj, female) {
+    if (G.SIMPLE) return;
     if (!E.ready('pedYell', 4)) return;
     const opts = G.TALK.pedestrian.filter((l) => (female ? l[0] === 'pedestrianF' : l[0] === 'pedestrian'));
     const [who, text] = G.pick(opts.length ? opts : G.TALK.pedestrian);
@@ -241,6 +245,7 @@
   };
 
   E.makeAngry = function (p) {
+    if (G.SIMPLE) return;
     p = p || G.pick(Pl.passengers);
     if (!p) return;
     E.angry = { p, until: now() + 25 };
