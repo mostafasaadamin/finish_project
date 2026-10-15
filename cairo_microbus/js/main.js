@@ -81,6 +81,7 @@
   }
 
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+  Main.snapCamera = () => updateCamera(0, true);
   function updateCamera(dt, snap) {
     const Pl = G.Player, cam = Main.camera;
     if (G.Foot.active) {
