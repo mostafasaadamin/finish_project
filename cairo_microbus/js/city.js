@@ -2,7 +2,9 @@
 // Procedural "Downtown Cairo": a grid of avenues with medians, dense apartment blocks,
 // shops, a mosque, a park, a gas station, the Nile corniche, Cairo Tower and the pyramids far away.
 (function (G) {
-  const BLOCK = 110, RW = 10, SW = 4.5, NR = 7, NH = 3;
+  const D = G.DISTRICT;
+  const BLOCK = D ? 150 : 110, RW = D ? 12 : 10, SW = D ? 5 : 4.5, NR = 7, NH = 3;
+  const MED = D ? 1.3 : 0.8; // median half width
   const C = (G.City = { BLOCK, RW, SW, NR, colliders: [], blocks: [], decor: {} });
   C.R = [];
   for (let k = 0; k < NR; k++) C.R.push((k - NH) * BLOCK);
@@ -23,7 +25,7 @@
   C.CHECKPOINT = { axis: 'x', road: 3, seg: 4 };
   const SPECIAL = { '1,4': 'park', '2,3': 'mosque', '4,1': 'gas' };
 
-  C.laneOff = (lane) => 3.2 + lane * 4.4;
+  C.laneOff = (lane) => (D ? 2.9 + lane * 3.6 : 3.2 + lane * 4.4);
   // position of a lane point. axis x: road z = rc, moving along x with dir
   C.lanePos = (axis, rc, dir, lane, along, out) => {
     out = out || new THREE.Vector3();
@@ -337,8 +339,74 @@
     }
   }
 
+
+  // ---------------- district (reference look): low beige buildings with setbacks and walls ----------------
+  function palmSpot(x, z, y) { const v = new THREE.Vector3(x, y || 0.2, z); v.palm = true; C.treeSpots.push(v); }
+  function treeSpot(x, z, y) { C.treeSpots.push(new THREE.Vector3(x, y || 0.2, z)); }
+  // boundary wall with a cap and a gate gap, along x (horiz) or z
+  function wallRun(x0, z0, x1, z1, gateAt) {
+    const horiz = Math.abs(z1 - z0) < 0.01, len = horiz ? x1 - x0 : z1 - z0;
+    const seg = (a, b) => {
+      if (b - a < 0.3) return;
+      const m = (a + b) / 2, l = b - a;
+      if (horiz) {
+        B.add('vc', G.Mat.vc, G.box(l, 2.1, 0.25, x0 + m, 1.25, z0, '#cdb894'));
+        B.add('vc', G.Mat.vc, G.box(l, 0.12, 0.35, x0 + m, 2.36, z0, '#b39c78'));
+      } else {
+        B.add('vc', G.Mat.vc, G.box(0.25, 2.1, l, x0, 1.25, z0 + m, '#cdb894'));
+        B.add('vc', G.Mat.vc, G.box(0.35, 0.12, l, x0, 2.36, z0 + m, '#b39c78'));
+      }
+    };
+    if (gateAt == null) seg(0, len);
+    else {
+      seg(0, gateAt - 1.8); seg(gateAt + 1.8, len);
+      const gx = horiz ? x0 + gateAt : x0, gz = horiz ? z0 : z0 + gateAt;
+      B.add('vc', G.Mat.vc, horiz ? G.box(3.4, 1.9, 0.08, gx, 1.15, gz, '#3b3b38') : G.box(0.08, 1.9, 3.4, gx, 1.15, gz, '#3b3b38'));
+    }
+  }
+  // plots along one side of the block; axis = direction of the street side
+  function plotRow(axis, a0, a1, front, inward) {
+    let a = a0;
+    while (a < a1 - 10) {
+      let w = G.rand(18, 30);
+      if (a1 - (a + w) < 12) w = a1 - a;
+      const walled = G.chance(0.55);
+      const set = walled ? G.rand(4, 7) : 0.3; // setback from the sidewalk
+      const gap = G.rand(1.5, 4);
+      const depth = G.rand(13, 19), floors = G.randi(3, 5);
+      const b0 = a + gap, b1 = a + w - gap;
+      let minX, maxX, minZ, maxZ, side;
+      if (axis === 'x') {
+        minX = b0; maxX = b1;
+        if (inward > 0) { minZ = front + set; maxZ = minZ + depth; side = '-z'; } else { maxZ = front - set; minZ = maxZ - depth; side = '+z'; }
+      } else {
+        minZ = b0; maxZ = b1;
+        if (inward > 0) { minX = front + set; maxX = minX + depth; side = '-x'; } else { maxX = front - set; minX = maxX - depth; side = '+x'; }
+      }
+      addBuilding(minX, maxX, minZ, maxZ, floors, walled ? null : side, false);
+      if (walled) {
+        if (axis === 'x') wallRun(a + 0.3, front + inward * 0.2, a + w - 0.3, front + inward * 0.2, G.rand(4, w - 4));
+        else wallRun(front + inward * 0.2, a + 0.3, front + inward * 0.2, a + w - 0.3, G.rand(4, w - 4));
+        if (G.chance(0.6)) { // a tree in the front yard
+          const t = a + G.rand(3, w - 3), o = front + inward * set * 0.5;
+          if (axis === 'x') treeSpot(t, o); else treeSpot(o, t);
+        }
+      }
+      a += w;
+    }
+  }
+  function districtBlock(x0, x1, z0, z1, ax0, ax1, az0, az1) {
+    plotRow('x', ax0, ax1, az0, 1);
+    plotRow('x', ax0, ax1, az1, -1);
+    plotRow('z', az0 + 26, az1 - 26, ax0, 1);
+    plotRow('z', az0 + 26, az1 - 26, ax1, -1);
+    // sidewalks stay clear like the reference; trees only in walled front yards
+    void x0; void x1; void z0; void z1;
+  }
+
   // ======================= BUILD =======================
   C.build = function (scene) {
+    C.treeSpots = [];
     B = new G.Batch();
     BF = new G.Batch();
     const root = (C.root = new THREE.Group());
@@ -365,7 +433,7 @@
         g.rotateX(-Math.PI / 2);
         g.translate(mid, 0, R[r]);
         BF.add('road', G.Mat.road, g);
-        curbBox(mid - L / 2, mid + L / 2, R[r] - 0.8, R[r] + 0.8, 0.3, true);
+        curbBox(mid - L / 2, mid + L / 2, R[r] - MED, R[r] + MED, 0.3, true);
         // along z at x = R[r]
         g = new THREE.PlaneGeometry(L, 2 * RW);
         scaleUV(g, L / 12, 1);
@@ -373,12 +441,13 @@
         g.rotateY(Math.PI / 2);
         g.translate(R[r], 0, mid);
         BF.add('road', G.Mat.road, g);
-        curbBox(R[r] - 0.8, R[r] + 0.8, mid - L / 2, mid + L / 2, 0.3, true);
+        curbBox(R[r] - MED, R[r] + MED, mid - L / 2, mid + L / 2, 0.3, true);
         // median lamps / palms
         const mainX = r === NH, avenue = r === NH || r === NR - 1;
         for (let t = -L / 2 + 8; t < L / 2 - 4; t += 15) {
           const odd = Math.round((t + L / 2) / 15) % 2;
-          if (avenue && odd) { palm(mid + t, R[r]); palm(R[r], mid + t); }
+          if (D && odd) { palmSpot(mid + t, R[r], 0.3); palmSpot(R[r], mid + t, 0.3); }
+          else if (avenue && odd) { palm(mid + t, R[r]); palm(R[r], mid + t); }
           else { lamp(mid + t, R[r], false); lamp(R[r], mid + t, true); }
         }
         void mainX;
@@ -406,6 +475,7 @@
         C.blocks.push({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, type, i, j });
         const ax0 = x0 + SW, ax1 = x1 - SW, az0 = z0 + SW, az1 = z1 - SW;
         if (type === 'park') { park(ax0, ax1, az0, az1); continue; }
+        if (D && type === 'normal') { districtBlock(x0, x1, z0, z1, ax0, ax1, az0, az1); continue; }
         const cx = (ax0 + ax1) / 2;
         if (type === 'mosque') {
           row('x', ax0, cx - 21, az0, 1);
@@ -432,14 +502,14 @@
     // edge strips of buildings that close the grid (west, south, north) + corniche walkway (east)
     const E = 70;
     curbBox(MIN - RW - E, MIN - RW, MIN - RW - E, MAX + RW + E, 0.2, true);
-    row('z', MIN - RW, MAX + RW, MIN - RW - SW, -1, { fMax: 8 });
-    row('z', MIN - RW - E, MAX + RW + E, MIN - RW - SW - 22, -1, { shops: false, fMin: 6, fMax: 10, noProps: true });
+    row('z', MIN - RW, MAX + RW, MIN - RW - SW, -1, D ? { fMin: 3, fMax: 5 } : { fMax: 8 });
+    row('z', MIN - RW - E, MAX + RW + E, MIN - RW - SW - 22, -1, D ? { shops: false, fMin: 4, fMax: 6, noProps: true } : { shops: false, fMin: 6, fMax: 10, noProps: true });
     curbBox(MIN - RW, MAX + RW + SW + 1, MIN - RW - E, MIN - RW, 0.2, true);
-    row('x', MIN - RW, MAX + RW, MIN - RW - SW, -1, { fMax: 7 });
-    row('x', MIN - RW, MAX + RW, MIN - RW - SW - 22, -1, { shops: false, fMin: 5, fMax: 9, noProps: true });
+    row('x', MIN - RW, MAX + RW, MIN - RW - SW, -1, D ? { fMin: 3, fMax: 5 } : { fMax: 7 });
+    row('x', MIN - RW, MAX + RW, MIN - RW - SW - 22, -1, D ? { shops: false, fMin: 4, fMax: 6, noProps: true } : { shops: false, fMin: 5, fMax: 9, noProps: true });
     curbBox(MIN - RW, MAX + RW + SW + 1, MAX + RW, MAX + RW + E, 0.2, true);
-    row('x', MIN - RW, MAX + RW, MAX + RW + SW, 1, {});
-    row('x', MIN - RW, MAX + RW, MAX + RW + SW + 22, 1, { shops: false, fMin: 6, fMax: 12, noProps: true });
+    row('x', MIN - RW, MAX + RW, MAX + RW + SW, 1, D ? { fMin: 3, fMax: 5 } : {});
+    row('x', MIN - RW, MAX + RW, MAX + RW + SW + 22, 1, D ? { shops: false, fMin: 4, fMax: 6, noProps: true } : { shops: false, fMin: 6, fMax: 12, noProps: true });
     curbBox(MAX + RW, MAX + RW + SW + 1, MIN - RW, MAX + RW, 0.2, true);
     C.blocks.push({ minX: MIN - RW - E, maxX: MIN - RW, minZ: MIN - RW - E, maxZ: MAX + RW + E, type: 'edge' });
     C.blocks.push({ minX: MIN - RW, maxX: MAX + RW + SW + 1, minZ: MIN - RW - E, maxZ: MIN - RW, type: 'edge' });
@@ -450,7 +520,7 @@
     B.add('vc', G.Mat.vc, G.box(0.1, 0.1, MAX - MIN + 2 * RW, rx, 1.2, 0, '#2d4f3c'));
     B.add('vc', G.Mat.vc, G.box(0.1, 0.1, MAX - MIN + 2 * RW, rx, 0.7, 0, '#2d4f3c'));
     for (let z = MIN - RW + 1; z < MAX + RW; z += 2.5) B.add('vc', G.Mat.vc, G.box(0.08, 1.1, 0.08, rx, 0.75, z, '#2d4f3c'));
-    for (let z = MIN; z < MAX; z += 16) palm(MAX + RW + 2.8, z + 8, 0.2);
+    for (let z = MIN; z < MAX; z += 16) (D ? palmSpot : palm)(MAX + RW + 2.8, z + 8, 0.2);
 
     landmarks();
 
@@ -470,13 +540,24 @@
     lr.position.set(0.3, 1.72, -0.3); lb.position.set(-0.3, 1.72, -0.3);
     police.mesh.add(lr, lb);
     C.policeLights = [lr, lb];
+    if (D) {
+      // red/white concrete barriers narrowing the road, a second police car on the other side
+      for (let t = -10; t <= 10; t += 5) {
+        B.add('vc', G.Mat.vc, G.box(2.0, 0.8, 0.5, cpx + t, 0.4, cpz + 4.6, t % 10 ? '#d8d4cc' : '#b71c1c'));
+        B.add('vc', G.Mat.vc, G.box(2.0, 0.8, 0.5, cpx + t, 0.4, cpz - 4.6, t % 10 ? '#d8d4cc' : '#b71c1c'));
+      }
+      const p2 = G.Models.vehicle('police');
+      p2.mesh.position.set(cpx - 8, 0.2, cpz - RW - 2.2);
+      p2.mesh.rotation.y = -Math.PI / 2;
+      root.add(p2.mesh);
+    }
 
     // station signs
     C.STATIONS.forEach((s) => {
       const along = (R[s.seg] + R[s.seg + 1]) / 2;
       s.along = along;
       s.dir = C.dirForSide(s.axis, s.side);
-      s.stopPos = C.lanePos(s.axis, R[s.road], s.dir, 1, along);
+      s.stopPos = C.lanePos(s.axis, R[s.road], s.dir, D ? 2 : 1, along);
       s.heading = C.headingFor(s.axis, s.dir);
       s.walkPos = C.sidePoint(s.axis, R[s.road], along, s.side, 1.6);
       const pole = C.sidePoint(s.axis, R[s.road], along + 6, s.side, 0.8);

@@ -51,18 +51,21 @@
     if (!G.Assets || !G.Assets.tileInto(x, PH() && G.Assets.image('asphalt'), 0, 0, RW_, RH, tile)) {
       x.drawImage(Tex.asphalt.image, 0, 0, RW_ / 2, RH); x.drawImage(Tex.asphalt.image, RW_ / 2, 0, RW_ / 2, RH);
     } else { x.globalCompositeOperation = 'multiply'; x.fillStyle = '#b8b5ae'; x.fillRect(0, 0, RW_, RH); x.globalCompositeOperation = 'source-over'; }
-    const Y = (p) => ((p + 10) / 20) * RH;
+    const HW = G.City ? G.City.RW : 10; // half road width
+    const Y = (p) => ((p + HW) / (2 * HW)) * RH;
     // worn paint: draw lines then scratch them
     const line = (y, w, color, dash) => {
       x.fillStyle = color;
       for (let px = 0; px < (dash ? RW_ / 2 : RW_); px += 4) { if (Math.random() < 0.9) x.fillRect(px, y - w / 2 + G.rand(-0.4, 0.4), 4, w); }
     };
-    [-1.05, 1.05, -9.5, 9.5].forEach((p) => line(Y(p), 5, 'rgba(226,178,40,0.85)'));
-    [-5.4, 5.4].forEach((p) => line(Y(p), 5, 'rgba(235,235,230,0.85)', true));
+    const yel = G.DISTRICT ? [-1.6, 1.6, -11.6, 11.6] : [-1.05, 1.05, -9.5, 9.5];
+    const dash = G.DISTRICT ? [-4.7, 4.7, -8.3, 8.3] : [-5.4, 5.4];
+    yel.forEach((p) => line(Y(p), 4, 'rgba(226,178,40,0.85)'));
+    dash.forEach((p) => line(Y(p), 4, 'rgba(235,235,230,0.85)', true));
     x.fillStyle = 'rgba(0,0,0,0.25)';
     x.fillRect(0, 0, RW_, 7); x.fillRect(0, RH - 7, RW_, 7);
     // oil stains in the middle of each lane
-    for (let i = 0; i < 18; i++) { x.fillStyle = 'rgba(10,10,10,0.12)'; x.beginPath(); x.ellipse(G.rand(0, RW_), Y(G.pick([-7.6, -3.2, 3.2, 7.6])) + G.rand(-12, 12), G.rand(10, 40), G.rand(4, 12), 0, 0, 7); x.fill(); }
+    for (let i = 0; i < 18; i++) { x.fillStyle = 'rgba(10,10,10,0.12)'; x.beginPath(); x.ellipse(G.rand(0, RW_), Y(G.pick(G.DISTRICT ? [-10.1, -6.5, -2.9, 2.9, 6.5, 10.1] : [-7.6, -3.2, 3.2, 7.6])) + G.rand(-12, 12), G.rand(10, 40), G.rand(4, 12), 0, 0, 7); x.fill(); }
     Tex.road = G.tex(c, true);
     Tex.roadN = dataTex(photoCanvas(RW_, RH, 'asphalt', 'NormalGL', tile), true);
     Tex.roadR = dataTex(photoCanvas(RW_, RH, 'asphalt', 'Roughness', tile), true);

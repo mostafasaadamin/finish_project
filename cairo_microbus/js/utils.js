@@ -4,6 +4,8 @@ window.G = window.G || {};
 (function (G) {
   // simple mode: just driving the microbus — no getting out, no random pedestrians, fights or crews
   G.SIMPLE = true;
+  // district like the reference video: wide boulevards with palm medians, low beige buildings
+  G.DISTRICT = true;
   G.rand = (a, b) => a + Math.random() * (b - a);
   G.randi = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
   G.pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

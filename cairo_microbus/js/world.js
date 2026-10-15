@@ -5,7 +5,7 @@
   const W = (G.World = { osm: false });
 
   W.build = function (scene) {
-    W.osm = !!(G.OSM && G.OSM.ok);
+    W.osm = !G.DISTRICT && !!(G.OSM && G.OSM.ok);
     if (W.osm) {
       G.OSM.build(scene);
       const O = G.OSM;
@@ -36,6 +36,7 @@
       W.policeLights = C.policeLights;
       W.checkpointFrame = { dx: 1, dz: 0, nx: 0, nz: 1, hw: C.RW };
       W.paths = W.gridPaths();
+      if (C.treeSpots && C.treeSpots.length) G.Trees.plant(scene, C.treeSpots);
     }
     W.paths.forEach((p) => {
       if (!p.cum) {

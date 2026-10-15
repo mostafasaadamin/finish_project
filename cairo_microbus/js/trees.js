@@ -36,53 +36,71 @@
   // ---------- date palms: ringed trunk + drooping fronds made of thin leaflets (alpha) ----------
   T.palmParts = function () {
     if (T._palm) return T._palm;
-    // frond texture: a midrib with many narrow leaflets
-    const c = G.canvas(128, 512), x = c.getContext('2d');
-    x.clearRect(0, 0, 128, 512);
-    for (let y = 30; y < 500; y += 5) {
-      const len = 58 * Math.sin(Math.PI * (y / 512)) + 6;
-      x.strokeStyle = `hsl(${88 + Math.random() * 16},${38 + Math.random() * 15}%,${22 + Math.random() * 14}%)`;
-      x.lineWidth = 3;
-      x.beginPath(); x.moveTo(64, y); x.lineTo(64 - len, y + 22); x.stroke();
-      x.beginPath(); x.moveTo(64, y); x.lineTo(64 + len, y + 22); x.stroke();
-    }
-    x.strokeStyle = '#6b6b3a'; x.lineWidth = 4; x.beginPath(); x.moveTo(64, 0); x.lineTo(64, 512); x.stroke();
-    const frondMat = new THREE.MeshStandardMaterial({ map: G.tex(c), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.8 });
+    // frond texture: curved midrib with dense, drooping leaflets (left half green, right half dry)
+    const c = G.canvas(256, 512), x = c.getContext('2d');
+    x.clearRect(0, 0, 256, 512);
+    const frond = (cx, dry) => {
+      for (let y = 18; y < 505; y += 3) {
+        const t = y / 512, len = 60 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 4;
+        const hue = dry ? 35 + Math.random() * 8 : 78 + Math.random() * 22;
+        const sat = dry ? 35 + Math.random() * 15 : 30 + Math.random() * 25;
+        const lig = dry ? 38 + Math.random() * 15 : 18 + Math.random() * 18 + t * 8;
+        x.strokeStyle = `hsl(${hue},${sat}%,${lig}%)`;
+        x.lineWidth = 2.2;
+        const droop = 10 + t * 26;
+        x.beginPath(); x.moveTo(cx, y); x.quadraticCurveTo(cx - len * 0.6, y + droop * 0.3, cx - len, y + droop); x.stroke();
+        x.beginPath(); x.moveTo(cx, y); x.quadraticCurveTo(cx + len * 0.6, y + droop * 0.3, cx + len, y + droop); x.stroke();
+      }
+      x.strokeStyle = dry ? '#8a7350' : '#7a7a45'; x.lineWidth = 3.5;
+      x.beginPath(); x.moveTo(cx, 0); x.lineTo(cx, 512); x.stroke();
+    };
+    frond(64, false);
+    frond(192, true);
+    const frondMat = new THREE.MeshStandardMaterial({ map: G.tex(c), alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.75 });
     frondMat.userData.linear = true;
-    // bark texture with leaf-base rings
-    const b = G.canvas(64, 256), bx = b.getContext('2d');
-    bx.fillStyle = '#6e5a43'; bx.fillRect(0, 0, 64, 256);
-    for (let y = 0; y < 256; y += 9) { bx.fillStyle = 'rgba(40,28,16,0.55)'; bx.fillRect(0, y, 64, 3); bx.fillStyle = 'rgba(160,130,95,0.35)'; bx.fillRect(0, y + 3, 64, 2); }
-    G.noise(bx, 64, 256, 800, 0.15, true);
+    // bark: diamond leaf-base pattern of a date palm
+    const b = G.canvas(128, 256), bx = b.getContext('2d');
+    bx.fillStyle = '#7a6448'; bx.fillRect(0, 0, 128, 256);
+    for (let y = 0; y < 256; y += 10) for (let xx = (y / 10) % 2 ? 0 : 8; xx < 128; xx += 16) {
+      bx.fillStyle = 'rgba(45,32,18,0.55)'; bx.beginPath(); bx.moveTo(xx, y); bx.lineTo(xx + 8, y + 5); bx.lineTo(xx, y + 10); bx.lineTo(xx - 8, y + 5); bx.fill();
+      bx.fillStyle = 'rgba(170,140,100,0.3)'; bx.fillRect(xx - 6, y + 4, 12, 2);
+    }
+    G.noise(bx, 128, 256, 1500, 0.15, true);
     const barkMat = new THREE.MeshStandardMaterial({ map: G.tex(b, true), roughness: 1 });
     barkMat.userData.linear = true;
-    // trunk, slightly curved
-    const H = 1, trunk = new THREE.CylinderGeometry(0.17, 0.24, H, 8, 8, true);
+    // trunk (unit height, scaled per palm): slim, slight lean, thicker at the crown
+    const H = 1, trunk = new THREE.CylinderGeometry(0.2, 0.26, H, 10, 10, true);
     trunk.translate(0, H / 2, 0);
     const tp = trunk.attributes.position;
-    for (let i = 0; i < tp.count; i++) { const y = tp.getY(i); tp.setX(i, tp.getX(i) + 0.25 * y * y); }
+    for (let i = 0; i < tp.count; i++) {
+      const y = tp.getY(i), bulge = 1 + 0.35 * Math.max(0, (y - 0.9) / 0.1);
+      tp.setXYZ(i, tp.getX(i) * bulge + 0.18 * y * y, y, tp.getZ(i) * bulge);
+    }
     const tuv = trunk.attributes.uv;
-    for (let i = 0; i < tuv.count; i++) tuv.setY(i, tuv.getY(i) * 6);
+    for (let i = 0; i < tuv.count; i++) tuv.setY(i, tuv.getY(i) * 8);
     trunk.computeVertexNormals();
-    // ~16 fronds radiating from the crown, bending down
+    // crown: 3 tiers of long arching fronds (top ones rise, lower ones droop) + dry skirt
     const fronds = [];
-    for (let k = 0; k < 16; k++) {
-      const g = new THREE.PlaneGeometry(0.9, 3.4, 1, 8);
-      g.translate(0, 1.7, 0); // base at origin, length along +y
-      const up = k < 5 ? 0.9 : 0.35, droop = k < 5 ? 0.35 : 0.9;
-      const p = g.attributes.position;
+    const make = (k, n, up, droop, L, W, dry) => {
+      const g = new THREE.PlaneGeometry(W, L, 1, 10);
+      g.translate(0, L / 2, 0);
+      const p = g.attributes.position, uv = g.attributes.uv;
       for (let i = 0; i < p.count; i++) {
-        const t = p.getY(i) / 3.4;
-        // lay the frond out and let it droop
-        const out = p.getY(i) * Math.cos(up - droop * t), h = p.getY(i) * Math.sin(up - droop * t) * 0.6;
-        p.setXYZ(i, p.getX(i) * (1 - t * 0.4), h, out);
+        const t = p.getY(i) / L, along = p.getY(i);
+        const ang = up - droop * t * t;
+        p.setXYZ(i, p.getX(i) * (1 - t * 0.5), along * Math.sin(ang), along * Math.cos(ang));
+        uv.setX(i, uv.getX(i) * 0.5 + (dry ? 0.5 : 0));
       }
-      g.rotateY((k / 16) * Math.PI * 2 + (k % 2) * 0.2);
-      g.translate(0.25, 0, 0); // crown sits on the curved trunk top
+      g.rotateY((k / n) * Math.PI * 2 + G.rand(-0.15, 0.15));
+      g.translate(0.18, 0, 0); // crown sits on the leaning trunk top
       g.computeVertexNormals();
       fronds.push(g);
-    }
-    const frondGeo = G.merge(fronds.map((g) => { g.deleteAttribute('color'); return g; }));
+    };
+    for (let k = 0; k < 8; k++) make(k + 0.5, 8, 1.25, 0.9, 3.2, 1.0, false); // upper, rising
+    for (let k = 0; k < 12; k++) make(k, 12, 0.55, 1.3, 4.4, 1.25, false); // middle, arching
+    for (let k = 0; k < 10; k++) make(k + 0.3, 10, -0.1, 1.1, 4.0, 1.15, false); // lower, drooping
+    for (let k = 0; k < 9; k++) make(k + 0.6, 9, -1.2, 0.2, 2.2, 0.9, true); // dry fronds hanging down
+    const frondGeo = G.merge(fronds.map((g) => { if (g.attributes.color) g.deleteAttribute('color'); return g; }));
     T._palm = { trunk, frondGeo, frondMat, barkMat };
     return T._palm;
   };
@@ -135,10 +153,10 @@
     const P = T.palmParts();
     const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
     const items = spots.map((p) => {
-      const h = G.rand(7, 11), rot = G.rand(0, 6.28), sc = G.rand(0.9, 1.15);
+      const h = G.rand(8, 12), rot = G.rand(0, 6.28), sc = G.rand(0.95, 1.2);
       q.setFromAxisAngle(up, rot);
       const m1 = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), q, new THREE.Vector3(sc, h, sc));
-      const top = new THREE.Vector3(0.25 * sc, h, 0).applyQuaternion(q);
+      const top = new THREE.Vector3(0.18 * sc, h, 0).applyQuaternion(q);
       const m2 = new THREE.Matrix4().compose(new THREE.Vector3(p.x + top.x, (p.y || 0) + h, p.z + top.z), q, new THREE.Vector3(sc, sc, sc));
       return { x: p.x, z: p.z, mats: [m1, m2] };
     });
