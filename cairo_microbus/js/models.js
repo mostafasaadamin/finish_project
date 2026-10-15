@@ -56,12 +56,12 @@
     // worn paint: draw lines then scratch them
     const line = (y, w, color, dash) => {
       x.fillStyle = color;
-      for (let px = 0; px < (dash ? RW_ / 2 : RW_); px += 4) { if (Math.random() < 0.9) x.fillRect(px, y - w / 2 + G.rand(-0.4, 0.4), 4, w); }
+      for (let px = 0; px < (dash ? RW_ * (G.DISTRICT ? 0.3 : 0.5) : RW_); px += 4) { if (Math.random() < (G.DISTRICT ? 0.97 : 0.9)) x.fillRect(px, y - w / 2 + G.rand(-0.3, 0.3), 4, w); }
     };
-    const yel = G.DISTRICT ? [-1.6, 1.6, -11.6, 11.6] : [-1.05, 1.05, -9.5, 9.5];
-    const dash = G.DISTRICT ? [-4.7, 4.7, -8.3, 8.3] : [-5.4, 5.4];
-    yel.forEach((p) => line(Y(p), 4, 'rgba(226,178,40,0.85)'));
-    dash.forEach((p) => line(Y(p), 4, 'rgba(235,235,230,0.85)', true));
+    const yel = G.DISTRICT ? [-2.1, 2.1, -11.6, 11.6] : [-1.05, 1.05, -9.5, 9.5];
+    const dash = G.DISTRICT ? [-5.55, 5.55, -8.85, 8.85] : [-5.4, 5.4];
+    yel.forEach((p) => line(Y(p), 4, 'rgba(226,178,40,0.92)'));
+    dash.forEach((p) => line(Y(p), G.DISTRICT ? 5 : 4, 'rgba(242,242,238,0.95)', true));
     x.fillStyle = 'rgba(0,0,0,0.25)';
     x.fillRect(0, 0, RW_, 7); x.fillRect(0, RH - 7, RW_, 7);
     // oil stains in the middle of each lane
@@ -72,7 +72,8 @@
 
     // ---- sidewalk paving (texture spans 2 m) ----
     c = photoCanvas(512, 512, 'sidewalk', 'Color', 512, (x2) => {
-      x2.globalCompositeOperation = 'multiply'; x2.fillStyle = '#d9cbb0'; x2.fillRect(0, 0, 512, 512); x2.globalCompositeOperation = 'source-over';
+      x2.globalCompositeOperation = 'multiply'; x2.fillStyle = G.DISTRICT ? '#c4c0b8' : '#d9cbb0'; x2.fillRect(0, 0, 512, 512); x2.globalCompositeOperation = 'source-over';
+      if (G.DISTRICT) { x2.globalCompositeOperation = 'saturation'; x2.fillStyle = 'hsl(0,0%,50%)'; x2.globalAlpha = 0.75; x2.fillRect(0, 0, 512, 512); x2.globalAlpha = 1; x2.globalCompositeOperation = 'source-over'; }
       for (let i = 0; i < 6; i++) { x2.fillStyle = 'rgba(60,45,25,0.08)'; x2.beginPath(); x2.arc(G.rand(0, 512), G.rand(0, 512), G.rand(20, 90), 0, 7); x2.fill(); }
     });
     if (!c) {
@@ -135,8 +136,8 @@
     const nScale = (v) => new THREE.Vector2(v, v);
     Mat.vc = std({ vertexColors: true, roughness: 0.85 });
     Mat.car = std({ vertexColors: true, roughness: 0.32, metalness: 0.35, envMapIntensity: 1.2 });
-    Mat.road = std({ map: Tex.road, normalMap: Tex.roadN, roughnessMap: Tex.roadR, normalScale: nScale(0.8), color: 0xcfcfcf });
-    Mat.asphalt = std({ map: Tex.asphalt, normalMap: Tex.asphaltN, roughnessMap: Tex.asphaltR, normalScale: nScale(0.8), color: 0xcfcfcf });
+    Mat.road = std({ map: Tex.road, normalMap: Tex.roadN, roughnessMap: Tex.roadR, normalScale: nScale(0.8), color: G.DISTRICT ? 0xb4b4b4 : 0xcfcfcf });
+    Mat.asphalt = std({ map: Tex.asphalt, normalMap: Tex.asphaltN, roughnessMap: Tex.asphaltR, normalScale: nScale(0.8), color: G.DISTRICT ? 0xb4b4b4 : 0xcfcfcf });
     Mat.paving = std({ map: Tex.paving, normalMap: Tex.pavingN, roughness: 0.85, color: 0xd8cfc0 }); // dusty, not glaring
     Mat.curb = std({ map: Tex.curb, roughness: 0.8 });
     Mat.roof = std({ map: Tex.roof, roughness: 0.95 });

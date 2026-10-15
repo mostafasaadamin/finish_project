@@ -4,7 +4,7 @@
 (function (G) {
   const D = G.DISTRICT;
   const BLOCK = D ? 150 : 110, RW = D ? 12 : 10, SW = D ? 5 : 4.5, NR = 7, NH = 3;
-  const MED = D ? 1.3 : 0.8; // median half width
+  const MED = D ? 1.8 : 0.8; // median half width
   const C = (G.City = { BLOCK, RW, SW, NR, colliders: [], blocks: [], decor: {} });
   C.R = [];
   for (let k = 0; k < NR; k++) C.R.push((k - NH) * BLOCK);
@@ -25,7 +25,7 @@
   C.CHECKPOINT = { axis: 'x', road: 3, seg: 4 };
   const SPECIAL = { '1,4': 'park', '2,3': 'mosque', '4,1': 'gas' };
 
-  C.laneOff = (lane) => (D ? 2.9 + lane * 3.6 : 3.2 + lane * 4.4);
+  C.laneOff = (lane) => (D ? 3.9 + lane * 3.3 : 3.2 + lane * 4.4);
   // position of a lane point. axis x: road z = rc, moving along x with dir
   C.lanePos = (axis, rc, dir, lane, along, out) => {
     out = out || new THREE.Vector3();
@@ -340,6 +340,35 @@
   }
 
 
+
+  // zebra crossing + stop line on the four approaches of a junction
+  let paintMat = null;
+  function crossings(jx, jz) {
+    if (!paintMat) { paintMat = new THREE.MeshStandardMaterial({ color: 0xe9e9e4, roughness: 0.75 }); paintMat.userData.linear = true; }
+    const y = 0.015;
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([ax, az]) => {
+      // along the approach road, the crossing sits just outside the junction box
+      const d0 = RW + 1.2;
+      for (let o = -RW + 1.2; o <= RW - 1.2; o += 1.1) {
+        if (Math.abs(o) < MED + 0.4) continue; // not over the median
+        const g = new THREE.PlaneGeometry(0.55, 3.2);
+        g.rotateX(-Math.PI / 2);
+        if (ax) g.rotateY(Math.PI / 2);
+        const cx = jx + ax * (d0 + 1.6) + (az ? o : 0), cz = jz + az * (d0 + 1.6) + (ax ? o : 0);
+        g.translate(cx, y, cz);
+        BF.add('paint', paintMat, g);
+      }
+      // stop line across the incoming lanes (right-hand traffic: lanes on one side of the median)
+      const side = ax ? -ax : az; // which half of the road carries traffic towards the junction
+      const L = RW - MED - 0.6;
+      const g = new THREE.PlaneGeometry(ax ? 0.4 : L, ax ? L : 0.4);
+      g.rotateX(-Math.PI / 2);
+      const off = MED + 0.3 + L / 2;
+      g.translate(jx + ax * (d0 + 3.9) + (az ? side * off : 0), y, jz + az * (d0 + 3.9) + (ax ? -side * off : 0));
+      BF.add('paint', paintMat, g);
+    });
+  }
+
   // ---------------- district (reference look): low beige buildings with setbacks and walls ----------------
   function palmSpot(x, z, y) { const v = new THREE.Vector3(x, y || 0.2, z); v.palm = true; C.treeSpots.push(v); }
   function treeSpot(x, z, y) { C.treeSpots.push(new THREE.Vector3(x, y || 0.2, z)); }
@@ -458,6 +487,7 @@
         g.rotateX(-Math.PI / 2);
         g.translate(R[r], 0.001, R[c]);
         BF.add('asph', G.Mat.asphalt, g);
+        if (D) crossings(R[r], R[c]);
         // street name signs at the NE corner of every junction
         const sx = R[r] + RW + 1.3, sz = R[c] + RW + 1.3;
         B.add('vc', G.Mat.vc, G.cyl(0.05, 0.05, 3.6, 5, sx, 2.0, sz, '#555'));
