@@ -195,9 +195,61 @@
 
   // ======================= TOYOTA HIACE MICROBUS =======================
   // ---- real HiAce model (2005 Toyota HiAce by ActsOfDoge, Sketchfab Free Standard licence)
+  // 1975 Hyundai Pony sedan (user-supplied Sketchfab model, exterior only, simplified)
+  V.loadPony = function () {
+    return new Promise((res) => new THREE.GLTFLoader().load('assets/vehicles/pony.glb', (g) => {
+      const M = mats();
+      g.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = true;
+        const n = o.material.name || o.name;
+        if (/^Windows$/.test(n)) o.material = M.glass;
+        else if (/^Light_Glass$/.test(n)) o.material = M.lampGlass;
+        else {
+          const old = o.material;
+          const m = /CarPaint/.test(n)
+            ? new PhysMat({ color: 0xffffff, roughness: 0.3, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08 }) // solid paint, tinted per car
+            : new THREE.MeshStandardMaterial({ map: old.map, color: 0xffffff, roughness: /Rim/.test(n) ? 0.35 : 0.6, metalness: /Rim/.test(n) ? 0.7 : 0.1, alphaTest: /Badges/.test(n) ? 0.4 : 0 });
+          if (m.map) { m.map.encoding = THREE.sRGBEncoding; m.map.anisotropy = 4; }
+          m.name = n;
+          m.userData.linear = true;
+          o.material = m;
+        }
+      });
+      V.pony = g.scene;
+      res();
+    }, undefined, () => res()));
+  };
+  // a Pony in the given paint colour (taxi / police extras on top)
+  V.ponyClone = function (color, kind) {
+    const root = V.pony.clone(true);
+    root.traverse((o) => {
+      if (o.isMesh && o.material.name === 'CarPaint') {
+        o.material = o.material.clone();
+        o.material.color.set(color).convertSRGBToLinear();
+        o.material.userData.linear = true;
+      }
+    });
+    const M = mats();
+    const lining = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.35), M.cabin);
+    lining.position.set(0, 1.0, -0.2);
+    root.add(lining);
+    if (kind === 'taxi') {
+      const sign = rbox(0.5, 0.16, 0.2, 0.04, tag(new THREE.MeshStandardMaterial({ color: lin('#f5f5f5'), emissive: lin('#ffe9a8'), emissiveIntensity: 0.25 })));
+      sign.position.set(0, 1.43, -0.3);
+      root.add(sign);
+    } else if (kind === 'police') {
+      const bar = rbox(0.9, 0.1, 0.24, 0.04, M.plastic);
+      bar.position.set(0, 1.41, -0.3);
+      root.add(bar);
+    }
+    return root;
+  };
+
   V.load = function () {
     if (!THREE.GLTFLoader) return Promise.resolve();
-    return new Promise((res) => new THREE.GLTFLoader().load('assets/vehicles/hiace.glb', (g) => {
+    const pony = V.loadPony();
+    return Promise.all([pony, new Promise((res) => new THREE.GLTFLoader().load('assets/vehicles/hiace.glb', (g) => {
       const M = mats();
       g.scene.traverse((o) => {
         if (!o.isMesh) return;
@@ -220,7 +272,7 @@
       });
       V.hiace = g.scene;
       res();
-    }, undefined, () => res()));
+    }, undefined, () => res()))]);
   };
 
   // clone of the real model with spinning/steering wheel groups (same API as the built van)
@@ -411,7 +463,16 @@
       if (skip) return;
       const g = o.geometry.index ? o.geometry.clone() : o.geometry.clone();
       g.applyMatrix4(o.matrixWorld);
-      ['color', 'uv2'].forEach((a) => g.attributes[a] && g.deleteAttribute(a));
+      ['color', 'uv2', 'tangent'].forEach((a) => g.attributes[a] && g.deleteAttribute(a));
+      // loaded models may use interleaved / quantized attributes: make plain float arrays
+      ['position', 'normal', 'uv'].forEach((k) => {
+        const a = g.attributes[k];
+        if (!a || (!a.isInterleavedBufferAttribute && a.array instanceof Float32Array && a.array.length === a.count * a.itemSize)) return;
+        const f = new Float32Array(a.count * a.itemSize);
+        for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) f[i * a.itemSize + c] = a.getComponent ? a.getComponent(i, c) : [a.getX(i), a.getY(i), a.getZ(i)][c];
+        g.setAttribute(k, new THREE.BufferAttribute(f, a.itemSize));
+      });
+      if (!g.attributes.normal) g.computeVertexNormals();
       if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
       if (!groups.has(o.material)) groups.set(o.material, []);
       groups.get(o.material).push(g);
@@ -596,6 +657,13 @@
 
   // build a traffic / parked vehicle of the given type (body baked into a few meshes)
   V.make = function (type) {
+    if (V.pony && /sedan|taxi|police/.test(type)) {
+      const color = type === 'taxi' ? (G.chance(0.4) ? '#151515' : '#f2f2ee') : type === 'police' ? '#f2f2f2'
+        : G.pick(['#e9e9e6', '#1d1f22', '#8a8f95', '#b7babd', '#7a1c1c', '#1f3f6e', '#c9c1a8', '#3c4a3a', '#a33f1f']);
+      const root = V.ponyClone(color, type);
+      V.bake(root, null, true);
+      return { root, wheels: [], len: 3.95, wid: 1.57, blinkF: [0.62, 0.58, 1.99], blinkR: [0.62, 0.66, -1.93], real: true };
+    }
     let sp;
     switch (type) {
       case 'taxi': sp = G.chance(0.35) ? SPEC.oldtaxi() : SPEC.taxi(); break;
