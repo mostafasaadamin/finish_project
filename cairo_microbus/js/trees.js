@@ -5,7 +5,30 @@
   const T = (G.Trees = { models: [] });
 
   // load tree / palm / bush models listed in credits.json
+  // real date palm model (user-supplied Sketchfab model, converted from USDZ): 3 m tall at scale 1
+  T.loadPalm = function () {
+    if (!THREE.GLTFLoader) return Promise.resolve();
+    return new Promise((res) => new THREE.GLTFLoader().load('assets/models/date_palm.glb', (g) => {
+      const parts = [];
+      g.scene.updateMatrixWorld(true);
+      g.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        const geo = o.geometry.clone();
+        geo.applyMatrix4(o.matrixWorld);
+        const m = o.material;
+        if (m.map) m.map.encoding = THREE.sRGBEncoding;
+        m.side = THREE.DoubleSide;
+        if (m.alphaTest || m.transparent) { m.alphaTest = 0.5; m.transparent = false; }
+        m.userData.linear = true;
+        parts.push({ geo, mat: m });
+      });
+      T.palmModel = parts;
+      res();
+    }, undefined, () => res()));
+  };
+
   T.load = async function () {
+    await T.loadPalm();
     const list = ((G.Assets.credits && G.Assets.credits.models) || []).filter((m) => /tree|palm/i.test(m.id));
     if (!list.length || !THREE.GLTFLoader) return;
     const loader = new THREE.GLTFLoader();
@@ -150,6 +173,17 @@
 
   T.plantPalms = function (scene, spots) {
     if (!spots.length) return;
+    if (T.palmModel) {
+      const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+      const items = spots.map((p) => {
+        const s = G.rand(3.4, 4.3); // 10-13 m tall, full crowns like the avenues
+        q.setFromAxisAngle(up, G.rand(0, 6.28));
+        const m = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y || 0, p.z), q, new THREE.Vector3(s, s * G.rand(0.95, 1.1), s));
+        return { x: p.x, z: p.z, mats: T.palmModel.map(() => m) };
+      });
+      T.chunked(scene, T.palmModel, items, !G.Main.isMobile);
+      return;
+    }
     const P = T.palmParts();
     const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
     const items = spots.map((p) => {

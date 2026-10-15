@@ -1,0 +1,2 @@
+date_palm.glb — "Date Palm" 3D model supplied by the project owner (from Sketchfab, USDZ export),
+converted to glTF (textures resized to 1024 px) for use in the game.
